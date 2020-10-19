@@ -172,14 +172,14 @@ def differentiate_voxels_sequences(tab_voxels, dict_vox):
 
 
 
-def create_dict_vox(df, starting, nb_routes, bikepath=False):
+def create_dict_vox(df, starting, ending, bikepath=False):
     """
     With a dataframe containing gps points separated in routes, creates a dict of voxels.  
     Parameters
     ----------
      df : pandas' DataFrame with columns=['lat', 'lon', 'route_num']
         Dataframe to use 
-    nb_routes : int
+    ending : int
         Number of routes to use in the dataframe 
         
     Returns
@@ -192,8 +192,7 @@ def create_dict_vox(df, starting, nb_routes, bikepath=False):
     
     dict_vox = {}
     tab_routes_voxels = []
-
-    for route_num in range(starting, starting+nb_routes):
+    for route_num in range(starting, ending+1):
         tab_routes_voxels.append([])
         route = df[df["route_num"]==route_num]
         points = route.values.tolist()
@@ -384,11 +383,11 @@ def get_voxels_with_min_routes(dict_vox, min_routes):
 def get_tab_routes_voxels_global(dict_voxels, nb_routes):
     t = []
     for key in dict_voxels:
-        for i in range(nb_routes):
+        for i in range(nb_routes+1):
             if(len(t)<=i):
                 t.append([])
             tab_routes = dict_voxels[key]["tab_routes_real"]+dict_voxels[key]["tab_routes_extended"]
-            if(i+1 in tab_routes):
+            if(i in tab_routes):
                 t[i].append(key)
     return t
     

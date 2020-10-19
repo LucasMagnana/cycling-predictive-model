@@ -23,7 +23,7 @@ def check_file(file, content):
 
 
 
-def load_gpx():
+def load_veleval():
     with open('gpx.df','rb') as infile:
         df = pickle.load(infile)
     begin = int(df.iloc[-1]["route_num"])
@@ -66,7 +66,7 @@ def request_map_matching(df_route):
 def clean_dataframe(df):
     nb_empty = 0
     df_final = pd.DataFrame(columns=['lat', 'lon', 'route_num'])
-    for i in range(1, df.iloc[-1]["route_num"]+1):
+    for i in range(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]+1):
         df_temp = df[df["route_num"]==i]
         if(len(df_temp)==0):
             nb_empty += 1
@@ -76,7 +76,7 @@ def clean_dataframe(df):
     return df_final
 
 
-def load_bikepath(file):
+def load_bikepath_lyon(file):
     with open(file) as infile:
         data = json.load(infile)        
     df_bikepath = pd.DataFrame(columns=['lat','lon', 'route_num'])
