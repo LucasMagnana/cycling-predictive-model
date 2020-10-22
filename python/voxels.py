@@ -380,14 +380,14 @@ def get_voxels_with_min_routes(dict_vox, min_routes):
     return tab_voxel_with_min_routes
 
 
-def get_tab_routes_voxels_global(dict_voxels, nb_routes):
+def get_tab_routes_voxels_global(dict_voxels, nb_routes, starting):
     t = []
     for key in dict_voxels:
         for i in range(nb_routes+1):
             if(len(t)<=i):
                 t.append([])
             tab_routes = dict_voxels[key]["tab_routes_real"]+dict_voxels[key]["tab_routes_extended"]
-            if(i in tab_routes):
+            if(i+starting in tab_routes):
                 t[i].append(key)
     return t
     

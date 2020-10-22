@@ -34,26 +34,28 @@ import python.validation as validation
 
 pd.options.mode.chained_assignment = None
 
-with open("files/gpx_matched_simplified.df",'rb') as infile:
+project_folder = "veleval"
+
+with open("files/"+project_folder+"/data/observations_matched_simplified.df",'rb') as infile:
     df_simplified = pickle.load(infile)
 tab_routes_voxels_simplified, dict_voxels_simplified = voxel.create_dict_vox(df_simplified, df_simplified.iloc[0]["route_num"], df_simplified.iloc[-1]["route_num"])
-tab_routes_voxels_simplified_global = voxel.get_tab_routes_voxels_global(dict_voxels_simplified, df_simplified.iloc[-1]["route_num"])
+tab_routes_voxels_simplified_global = voxel.get_tab_routes_voxels_global(dict_voxels_simplified, df_simplified.iloc[-1]["route_num"], df_simplified.iloc[0]["route_num"])
 
-with open("files/osmnx_pathfinding_simplified.df",'rb') as infile:
+with open("files/"+project_folder+"/data/osmnx_pathfinding_simplified.df",'rb') as infile:
     df_pathfinding = pickle.load(infile)       
 tab_routes_voxels_pathfinding, dict_voxels_pathfinding = voxel.create_dict_vox(df_pathfinding, df_pathfinding.iloc[0]["route_num"], df_pathfinding.iloc[-1]["route_num"])
-tab_routes_voxels_pathfinding_global = voxel.get_tab_routes_voxels_global(dict_voxels_pathfinding, df_pathfinding.iloc[-1]["route_num"])
+tab_routes_voxels_pathfinding_global = voxel.get_tab_routes_voxels_global(dict_voxels_pathfinding, df_pathfinding.iloc[-1]["route_num"], df_pathfinding.iloc[0]["route_num"])
 
-with open("files/lyon.ox", "rb") as infile:
+with open("files/"+project_folder+"/network_graphs/lyon.ox", "rb") as infile:
     G_lyon = pickle.load(infile)
 
-with open("files/lyon.ox", "rb") as infile:
+with open("files/"+project_folder+"/network_graphs/lyon.ox", "rb") as infile:
     G_lyon_base = pickle.load(infile)
 
-with open("files/st_etienne.ox", "rb") as infile:
+with open("files/"+project_folder+"/network_graphs/st_etienne.ox", "rb") as infile:
     G_stetienne = pickle.load(infile)
 
-with open("files/st_etienne.ox", "rb") as infile:
+with open("files/"+project_folder+"/network_graphs/st_etienne.ox", "rb") as infile:
     G_stetienne_base = pickle.load(infile)
 
 
@@ -67,15 +69,15 @@ tree_stetienne = KDTree(nodes_stetienne[['y', 'x']], metric='euclidean')
 G = G_lyon
 tree = tree_lyon
 
-with open("files/cluster_dbscan_custom.tab",'rb') as infile:
+with open("files/"+project_folder+"/data/dbscan_pathfinding_osmnx.tab",'rb') as infile:
     tab_clusters = pickle.load(infile)
-with open("files/voxels_pathfinding.dict",'rb') as infile:
+with open("files/"+project_folder+"/data/voxels_clustered_osmnx.dict",'rb') as infile:
     dict_voxels_pathfinding = pickle.load(infile)
-with open("files/kmeans.sk",'rb') as infile:
+with open("files/"+project_folder+"/data/kmeans_voxels_osmnx.sk",'rb') as infile:
     kmeans = pickle.load(infile)
-with open("files/dict_cluster",'rb') as infile:
+with open("files/"+project_folder+"/data/dbscan_pathfinding_osmnx.dict",'rb') as infile:
     dict_cluster = pickle.load(infile)
-with open("files/graph_modifications.dict",'rb') as infile:
+with open("files/"+project_folder+"/network_graphs/graph_modifications.dict",'rb') as infile:
     dict_modif = pickle.load(infile)
 
 size_data = 1
@@ -84,7 +86,7 @@ num_layers = 2
 voxels_frequency = 4
 
 network = RNN.RNN_LSTM(size_data, max(tab_clusters)+1, hidden_size, num_layers)
-network.load_state_dict(torch.load("files/network_osmnx.pt"))
+network.load_state_dict(torch.load("files/"+project_folder+"/neural_networks/network_osmnx.pt"))
 network.eval()
 
 deviation = 0 #5e-3
@@ -95,10 +97,10 @@ tab_coeff_modified = []
 tab_diff_coeff = []
 #________________________________________________________________________
 
-for i in range(250): #len(tab_clusters)):
+for i in range(1): #len(tab_clusters)):
 
     if(tab_clusters[i] != -1 and i != 675):
-        #i=8
+        i=8
         print(i)
         df_temp = df_pathfinding[df_pathfinding["route_num"]==i+1]
         d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
@@ -147,7 +149,7 @@ for i in range(250): #len(tab_clusters)):
         tab_voxels, dict_voxels = voxel.create_dict_vox(df_c_simplified, 1, 2)
 
         tab_voxels, dict_voxels = voxel.create_dict_vox(df_c_simplified, 1, 2)
-        tab_voxels_global = voxel.get_tab_routes_voxels_global(dict_voxels, df_c_simplified.iloc[-1]["route_num"])
+        tab_voxels_global = voxel.get_tab_routes_voxels_global(dict_voxels, df_c_simplified.iloc[-1]["route_num"], df_c_simplified.iloc[0]["route_num"])
         tab_voxels_min_route = voxel.get_voxels_with_min_routes(dict_voxels, 2)
         df = pd.DataFrame(tab_voxels_min_route, columns=["lat", "lon", "route_num", "type"])
         df_c_simplified = df_c_simplified.append(df)
@@ -206,11 +208,11 @@ for i in range(250): #len(tab_clusters)):
         df_c_modified = df_c_modified.append(df_route_modified)
 
         tab_voxels, dict_voxels = voxel.create_dict_vox(df_c_modified, 1, 2)
-        tab_voxels_global = voxel.get_tab_routes_voxels_global(dict_voxels, df_c_modified.iloc[-1]["route_num"])
+        tab_voxels_global = voxel.get_tab_routes_voxels_global(dict_voxels, df_c_modified.iloc[-1]["route_num"], df_c_modified.iloc[0]["route_num"])
         tab_voxels_min_route = voxel.get_voxels_with_min_routes(dict_voxels, 2)
         df = pd.DataFrame(tab_voxels_min_route, columns=["lat", "lon", "route_num", "type"])
         df_c_modified = df_c_modified.append(df)
-        #dp.display(df_c_modified, color="type") 
+        dp.display(df_c_modified, color="type") 
 
         coeff_modified = metric.get_distance_voxels(0, 1, tab_voxels_global)
 

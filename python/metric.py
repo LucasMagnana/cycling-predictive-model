@@ -24,6 +24,7 @@ def get_distance_voxels(num_route1, num_route2, tab_routes_voxels=None):
 
 
     common_parts = len(list(set(tab_routes_voxels[num_route1-1]) & set(tab_routes_voxels[num_route2-1])))
+
     #print(len(tab_routes_voxels[num_route1-1]))
     
     sim1 = -1

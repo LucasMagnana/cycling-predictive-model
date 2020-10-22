@@ -91,7 +91,7 @@ def load_bikepath_lyon(file):
     return df_bikepath
 
 
-def rd_compression(df, nb_routes=sys.maxsize, eps=1e-4):
+def rd_compression(df, start, end, eps=1e-4):
     """
     Compress a dataframe with douglas-peucker's algorithm.
 
@@ -111,8 +111,7 @@ def rd_compression(df, nb_routes=sys.maxsize, eps=1e-4):
     """
     
     df_simplified = pd.DataFrame(columns=['lat', 'lon', 'route_num'])
-    nb_routes = min(df.iloc[-1]["route_num"]+1, nb_routes)
-    for i in range(1, nb_routes):
+    for i in range(start, end):
         route = df[df['route_num']==i].values
         if(len(route)>0):
             simplified = rdp(np.delete(route, 2, 1), epsilon=eps)
@@ -122,12 +121,12 @@ def rd_compression(df, nb_routes=sys.maxsize, eps=1e-4):
     return df_simplified
 
 
-def mapmatching(infile, outfile, nb_routes=sys.maxsize):
+def mapmatching(infile_str, outfile_str, nb_routes=sys.maxsize):
     if(nb_routes > 0):
-        with open(infile,'rb') as infile:
+        with open(infile_str,'rb') as infile:
             df = pickle.load(infile)
-        check_file(outfile, pd.DataFrame(columns=['lon', 'lat', 'route_num']))
-        with open(outfile,'rb') as infile:
+        check_file(outfile_str, pd.DataFrame(columns=['lat', 'lon', 'route_num']))
+        with open(outfile_str,'rb') as infile:
             df_map_matched = pickle.load(infile)
 
         if(df_map_matched.empty):
@@ -148,7 +147,7 @@ def mapmatching(infile, outfile, nb_routes=sys.maxsize):
                             tab_points.append([point['location'][1], point['location'][0], i])
                             distance += point['distance']
             df_map_matched = df_map_matched.append(pd.DataFrame(tab_points, columns=["lat", "lon", "route_num"]))
-            with open(outfile, 'wb') as outfile:
+            with open(outfile_str, 'wb') as outfile:
                 pickle.dump(df_map_matched, outfile)
 
 
@@ -215,20 +214,20 @@ def pathfind_route_osmnx(d_point, f_point, tree, G, i=1):
 def simplify_gps(infile, outfile, nb_routes=sys.maxsize):
     if(nb_routes > 0):
         with open(infile,'rb') as infile:
-            df_map_matched = pickle.load(infile)
-        check_file(outfile, pd.DataFrame(columns=['lon', 'lat', 'route_num']))
+            df = pickle.load(infile)
+        check_file(outfile, pd.DataFrame(columns=['lat', 'lon', 'route_num']))
         with open(outfile,'rb') as infile:
-            df_map_matched_simplified = pickle.load(infile)
-        if(len(df_map_matched_simplified) == 0):
+            df_simplified = pickle.load(infile)
+        if(len(df_simplified) == 0):
             last_route_simplified = 0
         else:
-            last_route_simplified = df_map_matched_simplified.iloc[-1]["route_num"]
-        nb_routes = min(df_map_matched.iloc[-1]["route_num"] - last_route_simplified + 1, nb_routes)
-        print(len(df_map_matched_simplified))
-        df_map_matched_simplified = df_map_matched_simplified.append(rd_compression(df_map_matched, nb_routes))
-        print(len(df_map_matched_simplified))
+            last_route_simplified = df_simplified.iloc[-1]["route_num"]
+        nb_routes = min(df.iloc[-1]["route_num"] - last_route_simplified, nb_routes)
+        #if(last_route_simplified != df.iloc[-1]["route_num"] and nb_routes != 0):
+        last_route_simplified += 1
+        df_simplified = df_simplified.append(rd_compression(df, last_route_simplified, last_route_simplified+nb_routes))
         with open(outfile, 'wb') as outfile:
-            pickle.dump(df_map_matched_simplified, outfile)
+            pickle.dump(df_simplified, outfile)
 
 
 def distance_between_points(p1, p2):
