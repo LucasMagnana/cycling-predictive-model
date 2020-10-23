@@ -32,6 +32,7 @@ import python.validation as validation
 #import python.learning as learning
 #from python.NN import *
 
+
 pd.options.mode.chained_assignment = None
 
 project_folder = "veleval"
@@ -97,10 +98,8 @@ tab_coeff_modified = []
 tab_diff_coeff = []
 #________________________________________________________________________
 
-for i in range(1): #len(tab_clusters)):
-
+for i in range(250): #len(tab_clusters)):
     if(tab_clusters[i] != -1 and i != 675):
-        i=8
         print(i)
         df_temp = df_pathfinding[df_pathfinding["route_num"]==i+1]
         d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
@@ -194,6 +193,8 @@ for i in range(1): #len(tab_clusters)):
         route_coord = [[G.nodes[x]["x"], G.nodes[x]["y"]] for x in route]
         route_coord = [x + [2, 2] for x in route_coord]
         df_route_modified = pd.DataFrame(route_coord, columns=["lon", "lat", "route_num", "type"])
+
+        #print(df_route_modified)
         #dp.display(df_route_modified)
 
         for key in dict_modif[cl]:
@@ -212,9 +213,11 @@ for i in range(1): #len(tab_clusters)):
         tab_voxels_min_route = voxel.get_voxels_with_min_routes(dict_voxels, 2)
         df = pd.DataFrame(tab_voxels_min_route, columns=["lat", "lon", "route_num", "type"])
         df_c_modified = df_c_modified.append(df)
-        dp.display(df_c_modified, color="type") 
+        #dp.display(df_c_modified, color="type") 
+
 
         coeff_modified = metric.get_distance_voxels(0, 1, tab_voxels_global)
+        
 
         tab_coeff_simplified.append(1-min(coeff_simplified))
         tab_coeff_modified.append(1-min(coeff_modified))

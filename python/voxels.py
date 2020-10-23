@@ -383,7 +383,7 @@ def get_voxels_with_min_routes(dict_vox, min_routes):
 def get_tab_routes_voxels_global(dict_voxels, nb_routes, starting):
     t = []
     for key in dict_voxels:
-        for i in range(nb_routes+1):
+        for i in range(nb_routes):
             if(len(t)<=i):
                 t.append([])
             tab_routes = dict_voxels[key]["tab_routes_real"]+dict_voxels[key]["tab_routes_extended"]
