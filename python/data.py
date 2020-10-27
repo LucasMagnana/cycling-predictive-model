@@ -11,6 +11,7 @@ from math import sin, cos, sqrt, atan2, radians
 from geopy.distance import geodesic
 import networkx as nx
 import osmnx as ox
+from sklearn.neighbors import KDTree
 
 token = "pk.eyJ1IjoibG1hZ25hbmEiLCJhIjoiY2s2N3hmNzgwMGNnODNqcGJ1N2l2ZXZpdiJ9.-aOxDLM8KbEQnJfXegtl7A"
 
@@ -110,8 +111,10 @@ def rd_compression(df, start, end, eps=1e-4):
         the compressed DataFrame
     """
     
+    print(start, end)
     df_simplified = pd.DataFrame(columns=['lat', 'lon', 'route_num'])
     for i in range(start, end):
+        print(i)
         route = df[df['route_num']==i].values
         if(len(route)>0):
             simplified = rdp(np.delete(route, 2, 1), epsilon=eps)
@@ -197,8 +200,44 @@ def pathfind_route_mapbox(d_point, f_point, df_pathfinding=pd.DataFrame(), num_r
     return None
 
 
+def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxsize):
+    if(nb_routes > 0):
+        with open(infile_str,'rb') as infile:
+            df_simplified = pickle.load(infile)
 
-def pathfind_route_osmnx(d_point, f_point, tree, G, i=1):
+        with open(graphfile_str,'rb') as infile:
+            G = pickle.load(infile)
+            nodes, _ = ox.graph_to_gdfs(G)
+            tree = KDTree(nodes[['y', 'x']], metric='euclidean')
+
+        check_file(outfile_str, pd.DataFrame(columns=['lat', 'lon', 'route_num']))
+        with open(outfile_str,'rb') as infile:
+            df_pathfinding = pickle.load(infile)
+
+        if(len(df_pathfinding) == 0):
+            last_route_pathfound = 0
+        else:
+            last_route_pathfound = df_pathfinding.iloc[-1]["route_num"]
+            if(last_route_pathfound < df_simplified.iloc[-1]["route_num"]):
+                last_route_pathfound += 1
+
+        nb_routes = min(df_simplified.iloc[-1]["route_num"] - last_route_pathfound, nb_routes)
+        print(last_route_pathfound, last_route_pathfound+nb_routes)
+        for i in range(last_route_pathfound, last_route_pathfound+nb_routes):
+            print(i)
+            df_temp = df_simplified[df_simplified["route_num"]==i]
+            d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
+            f_point = [df_temp.iloc[-1]["lat"], df_temp.iloc[-1]["lon"]]
+            route = pathfind_route_osmnx(d_point, f_point, tree, G)
+            route_coord = [[G.nodes[x]["y"], G.nodes[x]["x"]] for x in route]
+            route_coord = [x + [i] for x in route_coord]
+            df_pathfinding = df_pathfinding.append(pd.DataFrame(route_coord, columns=["lat", "lon", "route_num"]))
+            with open(outfile_str, 'wb') as outfile:
+                pickle.dump(df_pathfinding, outfile)
+
+
+
+def pathfind_route_osmnx(d_point, f_point, tree, G):
     d_idx = tree.query([d_point], k=1, return_distance=False)[0]
     f_idx = tree.query([f_point], k=1, return_distance=False)[0]
     nodes, _ = ox.graph_to_gdfs(G)
@@ -222,9 +261,9 @@ def simplify_gps(infile, outfile, nb_routes=sys.maxsize):
             last_route_simplified = 0
         else:
             last_route_simplified = df_simplified.iloc[-1]["route_num"]
+            if(last_route_simplified < df.iloc[-1]["route_num"]):
+                last_route_simplified += 1
         nb_routes = min(df.iloc[-1]["route_num"] - last_route_simplified, nb_routes)
-        #if(last_route_simplified != df.iloc[-1]["route_num"] and nb_routes != 0):
-        last_route_simplified += 1
         df_simplified = df_simplified.append(rd_compression(df, last_route_simplified, last_route_simplified+nb_routes))
         with open(outfile, 'wb') as outfile:
             pickle.dump(df_simplified, outfile)
@@ -304,6 +343,8 @@ def normalize_route(v1, n):
         new_point = [(v1[indice][0]+v1[indice+1][0])/2,
                      (v1[indice][1]+v1[indice+1][1])/2]
         v1.insert(indice+1, new_point)
+        
+
 
 
 '''def harmonize_route(v1, v2):

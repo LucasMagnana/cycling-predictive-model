@@ -36,15 +36,15 @@ def display(dfdisplay, n=75, line_group="route_num", color=None, filename=None):
 def display_routes(df, tab_routes, tab_voxels=[], line_group="route_num", color=None):
     dfdisplay = pd.DataFrame(columns=["lat", "lon", "route_num"])
     for i in range(len(tab_routes)):
-        dfdisplay = dfdisplay.append(df[df["route_num"]==tab_routes[i]+1])
+        dfdisplay = dfdisplay.append(df[df["route_num"]==tab_routes[i]])
     display(dfdisplay, len(tab_routes), line_group, color)
 
 
 def display_cluster_heatmap(df, tab_routes, tab_voxels=[], line_group="route_num", color=None):
     dfdisplay = pd.DataFrame(columns=["lat", "lon", "route_num"])
     for i in range(len(tab_routes)):
-        df_temp = df[df["route_num"]==tab_routes[i]+1]
-        df_temp["num_route"] = i+1
+        df_temp = df[df["route_num"]==tab_routes[i]]
+        df_temp["num_route"] = i
         dfdisplay = dfdisplay.append(df_temp)
     _, dict_voxels = voxel.create_dict_vox(dfdisplay, 1, dfdisplay.iloc[-1]["route_num"])
     tab = []
