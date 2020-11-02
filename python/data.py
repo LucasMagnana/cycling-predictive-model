@@ -17,6 +17,8 @@ token = "pk.eyJ1IjoibG1hZ25hbmEiLCJhIjoiY2s2N3hmNzgwMGNnODNqcGJ1N2l2ZXZpdiJ9.-aO
 
 def check_file(file, content):
     if(not(os.path.isfile(file))):
+        if not os.path.exists(os.path.dirname(file)):
+            os.makedirs(os.path.dirname(file))
         print("Warning: creating", file)
         open(file, "x")
         with open(file,'wb') as infile:
@@ -90,6 +92,23 @@ def load_bikepath_lyon(file):
         df_temp['route_num'] = i
         df_bikepath = df_bikepath.append(df_temp)
     return df_bikepath
+
+
+def simplify_gps(infile, outfile, nb_routes=sys.maxsize):
+    if(nb_routes > 0):
+        with open(infile,'rb') as infile:
+            df = pickle.load(infile)
+        check_file(outfile, pd.DataFrame(columns=['lat', 'lon', 'route_num']))
+        with open(outfile,'rb') as infile:
+            df_simplified = pickle.load(infile)
+        if(len(df_simplified) == 0):
+            last_route_simplified = 0
+        else:
+            last_route_simplified = df_simplified.iloc[-1]["route_num"]+1
+        nb_routes = min(df.iloc[-1]["route_num"] - last_route_simplified, nb_routes)
+        df_simplified = df_simplified.append(rd_compression(df, last_route_simplified, last_route_simplified+nb_routes+1))
+        with open(outfile, 'wb') as outfile:
+            pickle.dump(df_simplified, outfile)
 
 
 def rd_compression(df, start, end, eps=1e-4):
@@ -217,13 +236,11 @@ def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxs
         if(len(df_pathfinding) == 0):
             last_route_pathfound = 0
         else:
-            last_route_pathfound = df_pathfinding.iloc[-1]["route_num"]
-            if(last_route_pathfound < df_simplified.iloc[-1]["route_num"]):
-                last_route_pathfound += 1
+            last_route_pathfound = df_pathfinding.iloc[-1]["route_num"]+1
 
         nb_routes = min(df_simplified.iloc[-1]["route_num"] - last_route_pathfound, nb_routes)
-        print(last_route_pathfound, last_route_pathfound+nb_routes)
-        for i in range(last_route_pathfound, last_route_pathfound+nb_routes):
+        print(last_route_pathfound, last_route_pathfound+nb_routes+1)
+        for i in range(last_route_pathfound, last_route_pathfound+nb_routes+1):
             print(i)
             df_temp = df_simplified[df_simplified["route_num"]==i]
             d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
@@ -250,23 +267,7 @@ def pathfind_route_osmnx(d_point, f_point, tree, G):
     return route
 
 
-def simplify_gps(infile, outfile, nb_routes=sys.maxsize):
-    if(nb_routes > 0):
-        with open(infile,'rb') as infile:
-            df = pickle.load(infile)
-        check_file(outfile, pd.DataFrame(columns=['lat', 'lon', 'route_num']))
-        with open(outfile,'rb') as infile:
-            df_simplified = pickle.load(infile)
-        if(len(df_simplified) == 0):
-            last_route_simplified = 0
-        else:
-            last_route_simplified = df_simplified.iloc[-1]["route_num"]
-            if(last_route_simplified < df.iloc[-1]["route_num"]):
-                last_route_simplified += 1
-        nb_routes = min(df.iloc[-1]["route_num"] - last_route_simplified, nb_routes)
-        df_simplified = df_simplified.append(rd_compression(df, last_route_simplified, last_route_simplified+nb_routes))
-        with open(outfile, 'wb') as outfile:
-            pickle.dump(df_simplified, outfile)
+
 
 
 def distance_between_points(p1, p2):
@@ -293,11 +294,8 @@ def compute_distance(infile, outfile):
     with open(infile,'rb') as infile:
         df = pickle.load(infile)
     check_file(outfile, [])
-    if(os.stat(outfile).st_size != 0):
-        with open(outfile,'rb') as infile:
-            tab_distances = pickle.load(infile)
-    else:
-        tab_distances = []
+    with open(outfile,'rb') as infile:
+        tab_distances = pickle.load(infile)
     for i in range(len(tab_distances), df.iloc[-1]["route_num"]+1):
         df_temp = df[df["route_num"]==i]
         dist = 0
@@ -343,6 +341,76 @@ def normalize_route(v1, n):
         new_point = [(v1[indice][0]+v1[indice+1][0])/2,
                      (v1[indice][1]+v1[indice+1][1])/2]
         v1.insert(indice+1, new_point)
+
+
+
+def bikepath_fusion(df_bikepath, nb_routes=0):
+    if(nb_routes > 0):
+        df_bikepath_fusioned = pd.DataFrame()
+        route_num_fusioned = 0
+        nb_changes = 0
+        for i in range(nb_routes):
+            if(len(df_bikepath[df_bikepath["route_num"]==i]) > 0):
+                print(i)
+                for j in range(i, nb_routes):
+                    if(len(df_bikepath[df_bikepath["route_num"]==j]) > 0):
+                        p1 = df_bikepath[df_bikepath["route_num"]==i].values.tolist()[-1][:2]
+                        p2 = df_bikepath[df_bikepath["route_num"]==j].values.tolist()[0][:2]
+                        v1 = voxel.find_voxel_int(p1)
+                        v2 = voxel.find_voxel_int(p2)
+                        if(v1 == v2):
+                            nb_changes += 1
+                            df_bikepath = df_bikepath.replace({"route_num": j}, i)
+                            
+                df_temp = df_bikepath[df_bikepath["route_num"]==i]
+                df_temp["route_num"] = route_num_fusioned
+                route_num_fusioned += 1
+                df_bikepath_fusioned = df_bikepath_fusioned.append(df_temp)            
+        print(nb_changes, "changes")
+        return df_bikepath_fusioned
+
+
+def bikepath_fusion_first(df_bikepath):
+    verbose = False
+    n_route = 0
+    n_route_next = n_route+1
+    n = n_route
+    nb_change = 0
+    while(n_route < df_bikepath.iloc[-1]["route_num"]):
+        p1 = df_bikepath[df_bikepath["route_num"]==n_route].values.tolist()[-1][:2]
+        p2 = df_bikepath[df_bikepath["route_num"]==n_route_next].values.tolist()[0][:2]
+        v1 = voxel.find_voxel_int(p1)
+        v2 = voxel.find_voxel_int(p2)
+        if(v1 == v2):
+            tab_changes = [n_route]
+            while(v1 == v2):
+                tab_changes.append(n_route_next)
+                n_route_next += 1
+                n_route += 1
+                p1 = df_bikepath[df_bikepath["route_num"]==n_route].values.tolist()[-1][:2]
+                p2 = df_bikepath[df_bikepath["route_num"]==n_route_next].values.tolist()[0][:2]
+                v1 = voxel.find_voxel_int(p1)
+                v2 = voxel.find_voxel_int(p2)
+            for i in range(len(tab_changes)):
+                df_bikepath = df_bikepath.replace({"route_num": tab_changes[i]}, n)
+                if(verbose):
+                    print(tab_changes[i], "->", n, "equals")
+                if(i != 0):
+                    nb_change += 1
+            n+=1
+            n_route += 1
+        else:
+            df_bikepath = df_bikepath.replace({"route_num": n_route}, n)
+            if(verbose):
+                print(n_route, "->", n)
+            n_route += 1
+            n += 1
+        n_route_next += 1
+    df_bikepath = df_bikepath.replace({"route_num": df_bikepath.iloc[-1]["route_num"]}, n)
+    print(nb_change, "changes")
+    return df_bikepath
+    
+#df_bikepath_fusioned = bikepath_fusion(df_bikepath)
         
 
 

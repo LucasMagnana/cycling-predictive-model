@@ -27,6 +27,11 @@ def find_voxel_int(p):
     """
     v_lat = math.trunc(p[0]*10**(n_voxel+1))
     v_lon = math.trunc(p[1]*10**(n_voxel+1))
+
+    if(v_lat < 0 and v_lat%nb_subvox == 0 and v_lat != p[0]*10**(n_voxel+1)):
+        v_lat -= 1
+    if(v_lon < 0 and v_lon%nb_subvox == 0 and v_lon != p[1]*10**(n_voxel+1)):
+        v_lon -= 1
     
     while(v_lat%nb_subvox != 0):
         v_lat -= 1
@@ -193,6 +198,7 @@ def create_dict_vox(df, starting, ending, bikepath=False):
     dict_vox = {}
     tab_routes_voxels = []
     for route_num in range(starting, ending+1):
+        #print(route_num)
         tab_routes_voxels.append([])
         route = df[df["route_num"]==route_num]
         points = route.values.tolist()
@@ -239,9 +245,10 @@ def create_dict_vox(df, starting, ending, bikepath=False):
 
             vox_int = find_voxel_int(p1) #find the start voxel
             vox_final_int = find_voxel_int(p2) #find the final voxel
-                
+
             #while the final voxel has not been reached
             while(vox_int[0] != vox_final_int[0] or vox_int[1] != vox_final_int[1]):
+
                 vox_float = [vox_int[0]*10**(-n_voxel-1), vox_int[1]*10**(-n_voxel-1)] #transform the vox into real points
                 
                 key = str(int(vox_int[0]))+";"+str(int(vox_int[1])) #save the voxel
@@ -282,9 +289,9 @@ def create_dict_vox(df, starting, ending, bikepath=False):
                 intersection_lat_distance = math.sqrt((p1[0]-intersection_lat[0])**2+(p1[1]-intersection_lat[1])**2)
 
                 #find the shorter distance then go to the next voxel using the orientation of the line
-                if(intersection_lat_distance<intersection_lon_distance): 
+                if(intersection_lat_distance<=intersection_lon_distance): 
                     vox_int[0] += lat_orientation
-                else:
+                if(intersection_lon_distance<=intersection_lat_distance): 
                     vox_int[1] += lon_orientation
                     
             key = str(int(vox_int[0]))+";"+str(int(vox_int[1])) #end of the while loop, save the last voxel
