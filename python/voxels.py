@@ -9,7 +9,7 @@ def truncate(number, digits) -> float:
     stepper = 10.0 ** digits
     return math.trunc(stepper * number) / stepper
 
-def find_voxel_int(p):
+def find_voxel_int(p, new_voxel=True):
     """
     Find the voxel in which a point is by truncating its position. Voxel's position are transformed into 
     int to be manipulated in an easier way.
@@ -28,10 +28,11 @@ def find_voxel_int(p):
     v_lat = math.trunc(p[0]*10**(n_voxel+1))
     v_lon = math.trunc(p[1]*10**(n_voxel+1))
 
-    if(v_lat < 0 and v_lat%nb_subvox == 0 and v_lat != p[0]*10**(n_voxel+1)):
-        v_lat -= 1
-    if(v_lon < 0 and v_lon%nb_subvox == 0 and v_lon != p[1]*10**(n_voxel+1)):
-        v_lon -= 1
+    if(new_voxel):
+        if(v_lat < 0 and v_lat%nb_subvox == 0 and v_lat != p[0]*10**(n_voxel+1)):
+            v_lat -= 1
+        if(v_lon < 0 and v_lon%nb_subvox == 0 and v_lon != p[1]*10**(n_voxel+1)):
+            v_lon -= 1
     
     while(v_lat%nb_subvox != 0):
         v_lat -= 1
@@ -177,7 +178,7 @@ def differentiate_voxels_sequences(tab_voxels, dict_vox):
 
 
 
-def create_dict_vox(df, starting, ending, bikepath=False):
+def generate_voxels(df, starting, ending, bikepath=False):
     """
     With a dataframe containing gps points separated in routes, creates a dict of voxels.  
     Parameters
@@ -312,9 +313,15 @@ def create_dict_vox(df, starting, ending, bikepath=False):
                 tab_routes_voxels[-1].append(key)
 
     nb_max_routes = 0
+
+    tab_routes_voxels_global = [[] for i in range(ending+1-starting)]
                
     for key in dict_vox:
         tab_routes = dict_vox[key]["tab_routes_real"]
+
+        for route in tab_routes:
+            tab_routes_voxels_global[route].append(key)
+
         vox_str = key.split(";")
         vox_int = [int(vox_str[0]), int(vox_str[1])]
         
@@ -332,6 +339,8 @@ def create_dict_vox(df, starting, ending, bikepath=False):
                         if(diff_tab_routes[i] not in tab_routes
                           and diff_tab_routes[i] not in dict_vox[key]["tab_routes_extended"]):
                             dict_vox[key]["tab_routes_extended"].append(diff_tab_routes[i])
+                            tab_routes_voxels_global[diff_tab_routes[i]].append(key)
+                            
 
         if(len(dict_vox[key]["tab_routes_real"]) + len(dict_vox[key]["tab_routes_extended"]) > nb_max_routes):
             nb_max_routes = len(dict_vox[key]["tab_routes_real"]) + len(dict_vox[key]["tab_routes_extended"])
@@ -341,7 +350,20 @@ def create_dict_vox(df, starting, ending, bikepath=False):
             dict_vox[key]["cyclability_coeff"] = (len(dict_vox[key]["tab_routes_real"]) + len(dict_vox[key]["tab_routes_extended"]))/nb_max_routes
 
                         
-    return tab_routes_voxels, dict_vox
+    return tab_routes_voxels, tab_routes_voxels_global, dict_vox
+
+
+
+def get_tab_routes_voxels_global(dict_voxels, nb_routes, starting):
+    t = []
+    for i in range(nb_routes+1):
+        if(len(t)<=i):
+            t.append([])
+    for key in dict_voxels:
+        tab_routes = dict_voxels[key]["tab_routes_real"]+dict_voxels[key]["tab_routes_extended"]
+        if(i+starting in tab_routes and i+starting not in t[i]):
+            t[i].append(key)
+    return t
 
 
 def get_voxels_from_route(route):
@@ -385,18 +407,6 @@ def get_voxels_with_min_routes(dict_vox, min_routes):
             num_vox -= 1
             
     return tab_voxel_with_min_routes
-
-
-def get_tab_routes_voxels_global(dict_voxels, nb_routes, starting):
-    t = []
-    for key in dict_voxels:
-        for i in range(nb_routes):
-            if(len(t)<=i):
-                t.append([])
-            tab_routes = dict_voxels[key]["tab_routes_real"]+dict_voxels[key]["tab_routes_extended"]
-            if(i+starting in tab_routes):
-                t[i].append(key)
-    return t
     
 
 def get_dict_routes_voxels(dict_voxels, nb_routes, df):

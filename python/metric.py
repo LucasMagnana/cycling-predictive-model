@@ -7,23 +7,7 @@ import os
 
 def get_distance_voxels(num_route1, num_route2, tab_routes_voxels=None):
     
-    if(tab_routes_voxels == None):
-        if(not(os.path.isfile("files/routes_voxels.tab"))):
-            with open("files/gpx_matched_simplified.df",'rb') as infile:
-                df_cluster = pickle.load(infile)
-            _, dict_voxels = voxel.create_dict_vox(df_cluster, df_cluster.iloc[-1]["route_num"])
-            tab_routes_voxels = voxel.get_tab_routes_voxels_global(dict_voxels, df_cluster.iloc[-1]["route_num"])
-
-            with open("files/routes_voxels.tab",'wb') as infile:
-                pickle.dump(tab_routes_voxels, infile)
-        else:
-            with open("files/routes_voxels.tab",'rb') as outfile:
-                tab_routes_voxels = pickle.load(outfile)
-        num_route1 = int(num_route1[0])
-        num_route2 = int(num_route2[0])
-
-
-    common_parts = len(list(set(tab_routes_voxels[num_route1-1]) & set(tab_routes_voxels[num_route2-1])))
+    common_parts = len(list(set(tab_routes_voxels[num_route1]) & set(tab_routes_voxels[num_route2])))
 
     #print(len(tab_routes_voxels[num_route1-1]))
     
@@ -36,9 +20,9 @@ def get_distance_voxels(num_route1, num_route2, tab_routes_voxels=None):
         sim2 = 0.0
         
     if(sim1<0):
-        sim1 = common_parts/len(tab_routes_voxels[num_route1-1])
+        sim1 = common_parts/len(tab_routes_voxels[num_route1])
     if(sim2<0):
-        sim2 = common_parts/len(tab_routes_voxels[num_route2-1])
+        sim2 = common_parts/len(tab_routes_voxels[num_route2])
     
     #print("cp: ", common_parts)
 

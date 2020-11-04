@@ -70,14 +70,14 @@ tree_stetienne = KDTree(nodes_stetienne[['y', 'x']], metric='euclidean')
 G = G_lyon
 tree = tree_lyon
 
-with open("files/"+project_folder+"/data_processed/dbscan_pathfinding_osmnx.tab",'rb') as infile:
+with open("files/"+project_folder+"/clustering/dbscan_observations.tab",'rb') as infile:
     tab_clusters = pickle.load(infile)
-with open("files/"+project_folder+"/data_processed/voxels_clustered_osmnx.dict",'rb') as infile:
-    dict_voxels_pathfinding = pickle.load(infile)
-with open("files/"+project_folder+"/data_processed/kmeans_voxels_osmnx.sk",'rb') as infile:
+with open("files/"+project_folder+"/clustering/kmeans_voxels_osmnx.sk",'rb') as infile:
     kmeans = pickle.load(infile)
-with open("files/"+project_folder+"/data_processed/dbscan_pathfinding_osmnx.dict",'rb') as infile:
+with open("files/"+project_folder+"/clustering/dbscan_observations.dict",'rb') as infile:
     dict_cluster = pickle.load(infile)
+with open("files/"+project_folder+"/clustering/voxels_clustered_osmnx.dict",'rb') as infile:
+    dict_voxels_pathfinding = pickle.load(infile)
 
 data.check_file("files/"+project_folder+"/city_graphs/graph_modifications.dict", {})
 with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'rb') as infile:

@@ -14,10 +14,10 @@ def find_cluster(d_point, f_point, network, voxels_frequency, df, dict_voxels, c
 
     route = data.pathfind_route_osmnx(d_point, f_point, tree, G)
     route_coord = [[G.nodes[x]["x"], G.nodes[x]["y"]] for x in route]
-    route_coord = [x + [1] for x in route_coord]
+    route_coord = [x + [0] for x in route_coord]
 
     df_route = pd.DataFrame(route_coord, columns=["lon", "lat", "route_num"])
-    tab_routes_voxels, _ = voxels.create_dict_vox(df_route, 1, 1)
+    tab_routes_voxels, _, _ = voxels.generate_voxels(df_route, 0, 0)
     route = tab_routes_voxels[0]
 
     tab_voxels_int = []

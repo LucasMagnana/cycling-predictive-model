@@ -16,20 +16,22 @@ from RNN import *
 
 def main(args):
 
+    project_folder = "monresovelo"
+
     cuda = False
     #  gpx_pathfindind_cycling
-    with open(args.path+"files/osmnx_pathfinding_simplified.df",'rb') as infile:
+    with open(args.path+"files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
         df_pathfinding = pickle.load(infile)
-    with open(args.path+"files/gpx_matched_simplified.df",'rb') as infile:
+    with open(args.path+"files/"+project_folder+"/data_processed/observations_matched_simplified.df",'rb') as infile:
         df_simplified = pickle.load(infile)
-    with open(args.path+"files/cluster_dbscan_custom.tab",'rb') as infile:
+    with open(args.path+"files/"+project_folder+"/clustering/dbscan_observations.tab",'rb') as infile:
         tab_clusters = pickle.load(infile)
-    with open(args.path+"files/voxels_pathfinding.dict",'rb') as infile:
+    with open(args.path+"files/"+project_folder+"/clustering/voxels_clustered_osmnx.dict",'rb') as infile:
         dict_voxels = pickle.load(infile)
 
     df = df_pathfinding
 
-    tab_routes_voxels, _ = voxels.create_dict_vox(df, df.iloc[0]["route_num"], df.iloc[-1]["route_num"])
+    tab_routes_voxels, _, _ = voxels.generate_voxels(df, df.iloc[0]["route_num"], df.iloc[-1]["route_num"])
 
     tab_routes_voxels_int = []
     

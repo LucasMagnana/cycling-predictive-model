@@ -12,6 +12,7 @@ from geopy.distance import geodesic
 import networkx as nx
 import osmnx as ox
 from sklearn.neighbors import KDTree
+#import python.voxels as voxel
 
 token = "pk.eyJ1IjoibG1hZ25hbmEiLCJhIjoiY2s2N3hmNzgwMGNnODNqcGJ1N2l2ZXZpdiJ9.-aOxDLM8KbEQnJfXegtl7A"
 
@@ -344,12 +345,17 @@ def normalize_route(v1, n):
 
 
 
-def bikepath_fusion(df_bikepath, nb_routes=0):
+'''def bikepath_fusion(infile, outfile, nb_routes=1):
     if(nb_routes > 0):
-        df_bikepath_fusioned = pd.DataFrame()
+        with open(infile,'rb') as infile:
+                df_bikepath = pickle.load(infile)
+        check_file(outfile, pd.DataFrame(columns=['lon', 'lat', 'route_num']))
+        with open(outfile,'rb') as infile:
+            df_bikepath_fusioned = pickle.load(infile)
         route_num_fusioned = 0
         nb_changes = 0
-        for i in range(nb_routes):
+        nb_routes = df_bikepath.iloc[-1]["route_num"]
+        for i in range(nb_routes+1):
             if(len(df_bikepath[df_bikepath["route_num"]==i]) > 0):
                 print(i)
                 for j in range(i, nb_routes):
@@ -360,14 +366,14 @@ def bikepath_fusion(df_bikepath, nb_routes=0):
                         v2 = voxel.find_voxel_int(p2)
                         if(v1 == v2):
                             nb_changes += 1
-                            df_bikepath = df_bikepath.replace({"route_num": j}, i)
-                            
-                df_temp = df_bikepath[df_bikepath["route_num"]==i]
-                df_temp["route_num"] = route_num_fusioned
-                route_num_fusioned += 1
-                df_bikepath_fusioned = df_bikepath_fusioned.append(df_temp)            
+                            df_bikepath = df_bikepath.replace({"route_num": j}, i)                              
+            df_temp = df_bikepath[df_bikepath["route_num"]==i]
+            df_temp["route_num"] = route_num_fusioned
+            route_num_fusioned += 1
+            df_bikepath_fusioned = df_bikepath_fusioned.append(df_temp)    
         print(nb_changes, "changes")
-        return df_bikepath_fusioned
+        with open(outfile,'wb') as outfile:
+            pickle.dump(df_bikepath_fusioned, outfile)
 
 
 def bikepath_fusion_first(df_bikepath):
@@ -415,7 +421,7 @@ def bikepath_fusion_first(df_bikepath):
 
 
 
-'''def harmonize_route(v1, v2):
+def harmonize_route(v1, v2):
     diff = max(len(v1), len(v2)) - min(len(v1), len(v2))
     if(len(v1)>len(v2)):
         v2 += [v2[-1]]*diff

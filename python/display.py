@@ -46,7 +46,7 @@ def display_cluster_heatmap(df, tab_routes, tab_voxels=[], line_group="route_num
         df_temp = df[df["route_num"]==tab_routes[i]]
         df_temp["num_route"] = i
         dfdisplay = dfdisplay.append(df_temp)
-    _, dict_voxels = voxel.create_dict_vox(dfdisplay, 1, dfdisplay.iloc[-1]["route_num"])
+    _, _, dict_voxels = voxel.generate_voxels(dfdisplay, 0, dfdisplay.iloc[-1]["route_num"])
     tab = []
     for key in dict_voxels:
         tab_routes = dict_voxels[key]["tab_routes_real"]+dict_voxels[key]["tab_routes_extended"]

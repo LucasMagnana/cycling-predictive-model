@@ -8,6 +8,8 @@ from OSMPythonTools.nominatim import Nominatim
 
 from collections import OrderedDict
 
+project_folder = "monresovelo"
+
 overpass = Overpass()
 nominatim = Nominatim()
 
@@ -22,7 +24,7 @@ dimensions = OrderedDict([
 ])
 
 def fetch(typeOfRoad):
-    areaId = nominatim.query("Lyon").areaId()
+    areaId = nominatim.query("Montreal").areaId()
     query = overpassQueryBuilder(area=areaId, elementType='way', selector=typeOfRoad, out='body', includeGeometry=True)
     return overpass.query(query)
 data = Data(fetch, dimensions)
@@ -40,6 +42,6 @@ for i in range(len(dimensions['typeOfRoad'])):
 
 df = pd.DataFrame(route_coord, columns=["lon", "lat", "route_num"])
 
-with open("files/osm_bikepath.df", "wb") as infile:
+with open("files/"+project_folder+"/data_processed/osm_bikepath.df", "wb") as infile:
     pickle.dump(df, infile)
 
