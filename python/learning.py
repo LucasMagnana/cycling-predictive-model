@@ -76,15 +76,15 @@ def train_recursive(df, tab_clusters, loss, optimizer, network, size_data, cuda,
         if(s != 0 and s%(nb_step//4) == 0):
             print("1/4:", datetime.datetime.now().time())
 
-        if(s != 0 and s%10 == 0):
+        if(s>nb_step):
             predict_tab.append(test_recursive(df_test, network, tab_clusters, size_data, cuda))
 
         key = -1
         route = []
         while(key == -1 or len(route) == 0):
-            num_route = random.randint(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]-1)
+            num_route = random.randint(df.iloc[0]["route_num"], df.iloc[-1]["route_num"])
             key = tab_clusters[num_route]
-            route = data.dataframe_to_array(df[df["route_num"]==num_route+1], size_data)
+            route = data.dataframe_to_array(df[df["route_num"]==num_route], size_data)
             
         tens_route = torch.Tensor(route).unsqueeze(1)
         if(cuda):
@@ -116,7 +116,7 @@ def test_recursive(df, network, tab_clusters, size_data, cuda):
     nb_predict = 0
     for i in range(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]+1):
         route = data.dataframe_to_array(df[df["route_num"]==i], size_data)
-        if(tab_clusters[i-1] != -1 and len(route)>0):
+        if(tab_clusters[i] != -1 and len(route)>0):
             tens_route = torch.Tensor(route).unsqueeze(1)
             if(cuda):
                 tens_route = tens_route.cuda()
@@ -129,7 +129,7 @@ def test_recursive(df, network, tab_clusters, size_data, cuda):
                     input = tens_route[j]
                 output, hidden = network(input, hidden)
             pred = output.argmax(dim=1, keepdim=True)
-            if(tab_clusters[i-1] == pred.item()):
+            if(tab_clusters[i] == pred.item()):
                 good_predict += 1
             nb_predict += 1
     return good_predict/nb_predict
@@ -139,7 +139,8 @@ def test_random(df, tab_clusters):
     good_predict = 0
     nb_predict = 0
     last_clust = max(tab_clusters)
-    for i in range(df.iloc[-1]["route_num"]):
+    print(df.iloc[-1]["route_num"])
+    for i in range(df.iloc[-1]["route_num"]+1):
         if(tab_clusters[i] != -1):
             pred = random.randint(0, last_clust)
             if(tab_clusters[i] == pred):

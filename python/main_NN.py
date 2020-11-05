@@ -52,9 +52,9 @@ def main(args):
                 tab_points = voxels.get_voxel_points(vox_int)
                 #points = tab_points[0][:2]+tab_points[1][:2]+tab_points[2][:2]+tab_points[3][:2]
                 if vox not in dict_voxels :
-                    points = [-1, i+1]
+                    points = [-1]
                 else:
-                    points = [dict_voxels[vox]["cluster"], i+1]
+                    points = [dict_voxels[vox]["cluster"]]
                 tab_routes_voxels_int[i].append(points)
             nb_vox += 1
 
@@ -66,7 +66,7 @@ def main(args):
         print(len(tab_routes_voxels_int[i]))'''
 
         df_temp = pd.DataFrame(tab_routes_voxels_int[i], dtype=object)
-        df_temp["route_num"] = i+1
+        df_temp["route_num"] = i
         df_voxels = df_voxels.append(df_temp)
         
         proba_test = random.random()
@@ -101,7 +101,10 @@ def main(args):
     optimizer = torch.optim.Adam(network.parameters(), lr=learning_rate)
     loss = nn.NLLLoss()
 
+    print(df.iloc[-1]["route_num"], df_train.iloc[-1]["route_num"], df_test.iloc[-1]["route_num"])
+
     tab_loss, tab_predict = learning.train(df_train, tab_clusters, loss, optimizer, network, size_data, cuda, args.num_samples, df_test)
+
 
     g_predict = learning.test(df_test, None, tab_clusters, size_data, cuda)
     print("Random:", g_predict*100, "%")
