@@ -7,4 +7,4 @@ cache/
 .ipynb_checkpoints/
 montreal.ox
 distances_dbscan.mx
-
+*.pyc

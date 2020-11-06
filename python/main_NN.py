@@ -101,8 +101,6 @@ def main(args):
     optimizer = torch.optim.Adam(network.parameters(), lr=learning_rate)
     loss = nn.NLLLoss()
 
-    print(df.iloc[-1]["route_num"], df_train.iloc[-1]["route_num"], df_test.iloc[-1]["route_num"])
-
     tab_loss, tab_predict = learning.train(df_train, tab_clusters, loss, optimizer, network, size_data, cuda, args.num_samples, df_test)
 
 
@@ -112,9 +110,10 @@ def main(args):
     g_predict = learning.test(df_test, network, tab_clusters, size_data, cuda)
     print("Good predict:", g_predict*100, "%")
     
-    if(g_predict > 0.95):
+    if(g_predict > 0.8):
         print("Saving network...")
-        torch.save(network.state_dict(), args.path+"/files/network_temp.pt")
+        data.check_file("files/"+project_folder+"/neural_networks/network_temp.pt", [])
+        torch.save(network.state_dict(), args.path+"files/"+project_folder+"/neural_networks/network_temp.pt")
 
     plt.plot(tab_loss)
     plt.ylabel('Error')

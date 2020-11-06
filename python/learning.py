@@ -139,7 +139,6 @@ def test_random(df, tab_clusters):
     good_predict = 0
     nb_predict = 0
     last_clust = max(tab_clusters)
-    print(df.iloc[-1]["route_num"])
     for i in range(df.iloc[-1]["route_num"]+1):
         if(tab_clusters[i] != -1):
             pred = random.randint(0, last_clust)
