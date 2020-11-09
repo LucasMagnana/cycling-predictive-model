@@ -36,7 +36,7 @@ def find_cluster(d_point, f_point, network, voxels_frequency, df, dict_voxels, c
             points = [cl]
             tab_voxels_int.append(points)
         nb_vox += 1
-
+    #print(route, tab_voxels_int)
     route = tab_voxels_int
     if(len(route)>0):
         tens_route = torch.Tensor(route).unsqueeze(1)

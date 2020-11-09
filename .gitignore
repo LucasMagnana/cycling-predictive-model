@@ -5,6 +5,6 @@ python/__pycache__/
 .vscode/
 cache/
 .ipynb_checkpoints/
-montreal.ox
+city.ox
 distances_dbscan.mx
 *.pyc
