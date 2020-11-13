@@ -24,30 +24,6 @@ def check_file(file, content):
         open(file, "x")
         with open(file,'wb') as infile:
             pickle.dump(content, infile)
-
-
-
-def load_veleval():
-    with open('gpx.df','rb') as infile:
-        df = pickle.load(infile)
-    begin = int(df.iloc[-1]["route_num"])
-    print(begin)
-    for i in range(begin+1, begin+1109+1):
-        tree = ET.parse('Datas/GPS/GPX/data'+str(i)+'.gpx')
-        if(len(tree.getroot()) > 1):
-            root = tree.getroot()[1][0]
-            df_temp = pd.DataFrame(columns=['lat', 'lon'])
-            j=0
-            for child in root:
-                coord = child.attrib
-                coord['lat'] = float(coord['lat'])
-                coord['lon'] = float(coord['lon'])
-                df_temp = df_temp.append(pd.DataFrame(coord, index=[j]))
-                j+=1
-            df_temp["route_num"] = i
-            df = df.append(df_temp)
-    with open('gpx.df', 'wb') as outfile:
-        pickle.dump(df, outfile)
         
 
 def request_map_matching(df_route):
@@ -69,7 +45,7 @@ def request_map_matching(df_route):
 
 def clean_dataframe(df):
     nb_empty = 0
-    df_final = pd.DataFrame(columns=['lat', 'lon', 'route_num'])
+    df_final = pd.DataFrame(columns=df.columns)
     for i in range(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]+1):
         df_temp = df[df["route_num"]==i]
         if(len(df_temp)==0):
@@ -342,6 +318,21 @@ def normalize_route(v1, n):
         new_point = [(v1[indice][0]+v1[indice+1][0])/2,
                      (v1[indice][1]+v1[indice+1][1])/2]
         v1.insert(indice+1, new_point)
+        
+
+def compute_time_elapsed(df):
+    tab_te = []
+    for i in range(df.iloc[-1]["route_num"]+1):
+        df_temp = df[df["route_num"]==i]
+        tab_te.append(0)
+        last_line = pd.DataFrame()
+        for line in df_temp.iloc:
+            if(last_line.empty):
+                last_line = line
+            else:
+                tab_te.append(tab_te[-1]+pd.Timedelta(line["time"] - last_line["time"]).seconds)
+                last_line = line
+    return tab_te
 
 
 

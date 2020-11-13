@@ -5,6 +5,4 @@ python/__pycache__/
 .vscode/
 cache/
 .ipynb_checkpoints/
-city.ox
-distances_dbscan.mx
 *.pyc
