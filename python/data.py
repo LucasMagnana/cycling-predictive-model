@@ -12,6 +12,7 @@ from geopy.distance import geodesic
 import networkx as nx
 import osmnx as ox
 from sklearn.neighbors import KDTree
+from datetime import datetime
 #import python.voxels as voxel
 
 token = "pk.eyJ1IjoibG1hZ25hbmEiLCJhIjoiY2s2N3hmNzgwMGNnODNqcGJ1N2l2ZXZpdiJ9.-aOxDLM8KbEQnJfXegtl7A"
@@ -48,7 +49,7 @@ def clean_dataframe(df):
     df_final = pd.DataFrame(columns=df.columns)
     for i in range(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]+1):
         df_temp = df[df["route_num"]==i]
-        if(len(df_temp)==0):
+        if(len(df_temp)<=1):
             nb_empty += 1
         else:
             df_temp["route_num"] = i-nb_empty
@@ -71,11 +72,11 @@ def load_bikepath_lyon(file):
     return df_bikepath
 
 
-def simplify_gps(infile, outfile, nb_routes=sys.maxsize):
+def simplify_gps(infile, outfile, nb_routes=sys.maxsize, dim=2):
     if(nb_routes > 0):
         with open(infile,'rb') as infile:
             df = pickle.load(infile)
-        check_file(outfile, pd.DataFrame(columns=['lat', 'lon', 'route_num']))
+        check_file(outfile, pd.DataFrame(columns=df.columns))
         with open(outfile,'rb') as infile:
             df_simplified = pickle.load(infile)
         if(len(df_simplified) == 0):
@@ -83,15 +84,15 @@ def simplify_gps(infile, outfile, nb_routes=sys.maxsize):
         else:
             last_route_simplified = df_simplified.iloc[-1]["route_num"]+1
         nb_routes = min(df.iloc[-1]["route_num"] - last_route_simplified, nb_routes)
-        df_simplified = df_simplified.append(rd_compression(df, last_route_simplified, last_route_simplified+nb_routes+1))
+        df_simplified = df_simplified.append(rd_compression(df, last_route_simplified, last_route_simplified+nb_routes+1, dim))
         with open(outfile, 'wb') as outfile:
             pickle.dump(df_simplified, outfile)
 
 
-def rd_compression(df, start, end, eps=1e-4):
+
+def rd_compression(df, start, end, dim=2, eps=1e-4):
     """
     Compress a dataframe with douglas-peucker's algorithm.
-
     Parameters
     ----------
     df : pandas' DataFrame with columns=['lat', 'lon', 'route_num']
@@ -100,7 +101,6 @@ def rd_compression(df, start, end, eps=1e-4):
         Precision of the compression (high value = few points)
     nb_routes : int
         Number of routes to compress
-
     Returns
     -------
     pandas' DataFrame with columns=['lat', 'lon', 'route_num']
@@ -108,14 +108,18 @@ def rd_compression(df, start, end, eps=1e-4):
     """
     
     print(start, end)
-    df_simplified = pd.DataFrame(columns=['lat', 'lon', 'route_num'])
+    df_simplified = pd.DataFrame()
     for i in range(start, end):
         print(i)
         route = df[df['route_num']==i].values
         if(len(route)>0):
-            simplified = rdp(np.delete(route, 2, 1), epsilon=eps)
-            simplified = np.insert(simplified, 2, route[0][2], axis=1) #add the route_number to the compressed route
-            df_temp = pd.DataFrame(simplified, columns=['lat', 'lon', 'route_num'])
+            simplified = np.delete(route, range(dim, route.shape[1]), 1)
+            simplified = rdp(simplified.tolist(), epsilon=eps)
+            if(dim == 2):
+                df_temp = pd.DataFrame(simplified, columns=['lat', 'lon'])
+            else:
+                df_temp = pd.DataFrame(simplified, columns=['lat', 'lon', 'time_elapsed'])
+            df_temp["route_num"]=route[0][-1]
             df_simplified = df_simplified.append(df_temp)
     return df_simplified
 
@@ -318,8 +322,21 @@ def normalize_route(v1, n):
         new_point = [(v1[indice][0]+v1[indice+1][0])/2,
                      (v1[indice][1]+v1[indice+1][1])/2]
         v1.insert(indice+1, new_point)
-        
 
+
+def add_time_elapsed(file):
+    with open(file,'rb') as infile:
+        df = pickle.load(infile)
+    if("time_elapsed" not in df.columns):
+        tab_te = compute_time_elapsed(df)
+        if(len(tab_te)==len(df)):
+            df.insert(loc=2, column='time_elapsed', value=tab_te)
+            with open(file,'wb') as outfile:
+                pickle.dump(df, outfile)
+        else:
+            print("Dimension error.")
+
+    
 def compute_time_elapsed(df):
     tab_te = []
     for i in range(df.iloc[-1]["route_num"]+1):
@@ -330,10 +347,46 @@ def compute_time_elapsed(df):
             if(last_line.empty):
                 last_line = line
             else:
-                tab_te.append(tab_te[-1]+pd.Timedelta(line["time"] - last_line["time"]).seconds)
+                time = pd.Timedelta(line["time"] - last_line["time"]).total_seconds()
+                tab_te.append(tab_te[-1]+time)
                 last_line = line
     return tab_te
 
+
+def add_speed(file):
+    with open(file,'rb') as infile:
+        df = pickle.load(infile)
+    if("speed" not in df.columns):
+        tab_speed = compute_speed(df)
+        if(len(tab_speed)==len(df)):
+            df.insert(loc=2, column='speed', value=tab_speed)
+            with open(file,'wb') as outfile:
+                pickle.dump(df, outfile)
+        else:
+            print("Dimension error.")
+
+
+def compute_speed(df):
+    tab_speed = []
+    for i in range(df.iloc[-1]["route_num"]+1):
+        df_temp = df[df["route_num"]==i]
+        tab_speed.append(0)
+        last_line = pd.DataFrame()
+        for line in df_temp.iloc:
+            if(last_line.empty):
+                last_line = line
+            else:
+                distance = geodesic((last_line[0],last_line[1]), (line[0], line[1])).meters
+                time = line["time_elapsed"]
+
+                if(time == 0):
+                    tab_speed.append(-1)
+                else:
+                    tab_speed.append(distance/time)
+
+
+                last_line = line
+    return tab_speed
 
 
 '''def bikepath_fusion(infile, outfile, nb_routes=1):
@@ -419,3 +472,24 @@ def harmonize_route(v1, v2):
     else:
         v1 += [v1[-1]]*diff
     return v1, v2'''
+
+
+def load_veleval():
+    df = pd.DataFrame()
+    for i in range(1, 1110):
+        tree = ET.parse('data/veleval/GPX/data'+str(i)+'.gpx')
+        if(len(tree.getroot()) > 1):
+            route = []
+            root = tree.getroot()[1][0]
+            df_temp = pd.DataFrame(columns=['lat', 'lon'])
+            for child in root:
+                j=0
+                while("time" not in child[j].tag):
+                    j+=1
+                time = datetime.strptime(child[j].text, '%Y-%m-%dT%H:%M:%S.%fZ')
+                coord = child.attrib
+                coord['lat'] = float(coord['lat'])
+                coord['lon'] = float(coord['lon'])
+                route.append([coord['lat'], coord['lon'], time, i-1])
+            df = df.append(pd.DataFrame(route, columns=["lat", "lon", "time", "route_num"]))
+    return df

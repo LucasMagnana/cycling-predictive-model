@@ -1,6 +1,8 @@
 
 import plotly.express as px
 import pandas as pd
+import folium
+from folium.plugins import HeatMap
 
 import python.voxels as voxel
 
@@ -8,7 +10,7 @@ token = "pk.eyJ1IjoibG1hZ25hbmEiLCJhIjoiY2s2N3hmNzgwMGNnODNqcGJ1N2l2ZXZpdiJ9.-aO
 px.set_mapbox_access_token(token)
 
 
-def display(dfdisplay, n=75, line_group="route_num", color=None, filename=None):
+def display_mapbox(dfdisplay, n=75, line_group="route_num", color=None, filename=None):
     """
     Display a dataframe of gps points on a mapbox map.
     Parameters
@@ -31,6 +33,46 @@ def display(dfdisplay, n=75, line_group="route_num", color=None, filename=None):
     fig.show()
     if(filename != None):
         fig.write_image(filename)
+
+
+
+def display(df_display, line_group="route_num", color=None):
+    """
+    Display a dataframe of gps points on a mapbox map.
+    Parameters
+    ----------
+    df or str : pandas' DataFrame with columns=['lat', 'lon', 'route_num'] or the name of a file containing one
+        Dataframe to display or the file where it is located
+    n : int, optional
+        Number of routes to display
+    line_group : str, optional
+        Dataframe's attribute used to differenciate routes
+    color : str, optional
+        Dataframe's attribute used to color routes
+    """
+    base_map = folium.Map(location=[df_display.iloc[0]["lat"],df_display.iloc[0]["lon"]], control_scale=True, zoom_start=11)
+    tab_colors = ["blue", "red", "green"]
+    i = 0
+    cont = True
+    while(cont):
+        if(color != None):
+            df_temp = df_display[df_display["type"]==i]
+        else:
+            df_temp = df_display
+            cont = False
+        if(not df_temp.empty):
+            if(df_temp.iloc[-1]["route_num"]>0):
+                r = range(df_temp.iloc[0]["route_num"], df_temp.iloc[-1]["route_num"]+1)
+            else :
+                r = range(df_temp.iloc[0]["route_num"], df_temp.iloc[-1]["route_num"]-1, -1)
+            for j in r:
+                points = df_temp[df_temp["route_num"]==j][["lat","lon"]].values.tolist()
+                folium.PolyLine(points, color=tab_colors[i]).add_to(base_map)
+        else:
+            cont = False
+        i+=1
+    return base_map
+
 
 
 def display_routes(df, tab_routes, tab_voxels=[], line_group="route_num", color=None):
@@ -57,5 +99,11 @@ def display_cluster_heatmap(df, tab_routes, tab_voxels=[], line_group="route_num
             tab.append([vox_pos[0][0], vox_pos[0][1], dict_voxels[key]["cyclability_coeff"]])
 
     dfdisplay = pd.DataFrame(tab, columns=["lat", "lon", "value"])
-    fig = px.scatter_mapbox(dfdisplay, lat="lat", lon="lon",  color="value", size="value", zoom=10)
-    fig.show()
+    
+    map = folium.Map(location=[dfdisplay.iloc[0]["lat"],dfdisplay.iloc[0]["lon"]], control_scale=True, zoom_start=11)
+    HeatMap(data=dfdisplay.values.tolist(), max_zoom=13, radius=9, blur = 1, min_opacity = 0, max_val = 1).add_to(map)
+
+    '''fig = px.scatter_mapbox(dfdisplay, lat="lat", lon="lon",  color="value", size="value", zoom=10)
+    fig.show()'''
+
+    return map

@@ -88,7 +88,8 @@ tab_coeff_modified = []
 tab_diff_coeff = []
 #________________________________________________________________________
 
-for i in range(10): #len(tab_clusters)):
+
+for i in range(3, 5): #len(tab_clusters)):
     #i=8
     if(tab_clusters[i] != -1 and i != 675):
         print(i)
@@ -112,8 +113,8 @@ for i in range(10): #len(tab_clusters)):
             if(cl == tab_clusters[i]):
                 print("good predict")
 
-                #dp.display(df_route)
-                #dp.display_cluster_heatmap(df_simplified, dict_cluster[cl])
+                dp.display(df_route)
+                dp.display_cluster_heatmap(df_simplified, dict_cluster[cl])
 
 
         ################################################################################_
@@ -178,7 +179,7 @@ for i in range(10): #len(tab_clusters)):
         df_route_modified = pd.DataFrame(route_coord, columns=["lon", "lat", "route_num", "type"])
 
         #print(df_route_modified)
-        #dp.display(df_route_modified)
+        dp.display(df_route_modified)
 
         for key in dict_modif[cl]:
             vertexes = key.split(";")
