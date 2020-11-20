@@ -1,3 +1,0 @@
-*.mx filter=lfs diff=lfs merge=lfs -text
-*.df filter=lfs diff=lfs merge=lfs -text
-*.ox filter=lfs diff=lfs merge=lfs -text

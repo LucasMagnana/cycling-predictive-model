@@ -6,3 +6,9 @@ python/__pycache__/
 cache/
 .ipynb_checkpoints/
 *.pyc
+
+*.mx
+*.df
+*.ox
+*.dict
+*.tab
