@@ -1,8 +1,6 @@
 import pandas as pd
 import numpy as np
 import pickle
-import plotly.express as px
-import plotly.graph_objects as go
 from copy import deepcopy
 import json
 import torch
@@ -89,7 +87,7 @@ tab_diff_coeff = []
 #________________________________________________________________________
 
 
-for i in range(3, 5): #len(tab_clusters)):
+for i in range(10): #len(tab_clusters)):
     #i=8
     if(tab_clusters[i] != -1 and i != 675):
         print(i)
@@ -113,8 +111,8 @@ for i in range(3, 5): #len(tab_clusters)):
             if(cl == tab_clusters[i]):
                 print("good predict")
 
-                dp.display(df_route)
-                dp.display_cluster_heatmap(df_simplified, dict_cluster[cl])
+                #dp.display_mapbox(df_route)
+                #dp.display_cluster_heatmap_mapbox(df_simplified, dict_cluster[cl])
 
 
         ################################################################################_
@@ -139,7 +137,7 @@ for i in range(3, 5): #len(tab_clusters)):
         df = pd.DataFrame(tab_voxels_min_route, columns=["lat", "lon", "route_num", "type"])
         df_c_simplified = df_c_simplified.append(df)
 
-        #dp.display(df_c_simplified, color="type") 
+        #dp.display_mapbox(df_c_simplified, color="type") 
 
         coeff_simplified = metric.get_distance_voxels(0, 1, tab_voxels)
         
@@ -179,7 +177,7 @@ for i in range(3, 5): #len(tab_clusters)):
         df_route_modified = pd.DataFrame(route_coord, columns=["lon", "lat", "route_num", "type"])
 
         #print(df_route_modified)
-        dp.display(df_route_modified)
+        #dp.display_mapbox(df_route_modified)
 
         for key in dict_modif[cl]:
             vertexes = key.split(";")
@@ -198,7 +196,7 @@ for i in range(3, 5): #len(tab_clusters)):
         df = pd.DataFrame(tab_voxels_min_route, columns=["lat", "lon", "route_num", "type"])
         df_c_modified = df_c_modified.append(df)
 
-        #dp.display(df_c_modified, color="type") 
+        #dp.display_mapbox(df_c_modified, color="type") 
 
 
         coeff_modified = metric.get_distance_voxels(0, 1, tab_voxels_global)
@@ -213,16 +211,9 @@ for i in range(3, 5): #len(tab_clusters)):
 
         #print(1-min(coeff_simplified), 1-min(coeff_modified))
 
-fig = go.Figure()
-# Create and style traces
-'''fig.add_trace(go.Scatter(y=tab_coeff_simplified, name='Simplified',
-                            line=dict(color='firebrick', width=4)))
-fig.add_trace(go.Scatter(y=tab_coeff_modified, name = 'Modified',
-                            line=dict(color='royalblue', width=4)))'''
-
-fig.add_trace(go.Scatter(y=tab_diff_coeff, name='Simplified',
-                            line=dict(color='firebrick', width=4)))
-
-# Here we modify the tickangle of the xaxis, resulting in rotated labels.
-fig.update_layout(barmode='group', xaxis_tickangle=-45)
-fig.show()
+plt.style.use('seaborn-whitegrid')
+fig = plt.figure(figsize=(25,15))
+ax = plt.axes()
+x = np.linspace(0, len(tab_diff_coeff), len(tab_diff_coeff))
+plt.plot(x, tab_diff_coeff, color='red', linewidth=3.5)
+plt.show()

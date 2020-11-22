@@ -62,9 +62,9 @@ def display(df_display, line_group="route_num", color=None):
             cont = False
         if(not df_temp.empty):
             if(df_temp.iloc[-1]["route_num"]>0):
-                r = range(df_temp.iloc[0]["route_num"], df_temp.iloc[-1]["route_num"]+1)
+                r = range(int(df_temp.iloc[0]["route_num"]), int(df_temp.iloc[-1]["route_num"])+1)
             else :
-                r = range(df_temp.iloc[0]["route_num"], df_temp.iloc[-1]["route_num"]-1, -1)
+                r = range(int(df_temp.iloc[0]["route_num"]), int(df_temp.iloc[-1]["route_num"])-1, -1)
             for j in r:
                 points = df_temp[df_temp["route_num"]==j][["lat","lon"]].values.tolist()
                 folium.PolyLine(points, color=tab_colors[i]).add_to(base_map)
@@ -82,7 +82,9 @@ def display_routes(df, tab_routes, tab_voxels=[], line_group="route_num", color=
     display(dfdisplay, len(tab_routes), line_group, color)
 
 
-def display_cluster_heatmap(df, tab_routes, tab_voxels=[], line_group="route_num", color=None):
+
+
+def create_df_heatmap(df, tab_routes, tab_voxels=[], line_group="route_num", color=None):
     dfdisplay = pd.DataFrame(columns=["lat", "lon", "route_num"])
     for i in range(len(tab_routes)):
         df_temp = df[df["route_num"]==tab_routes[i]]
@@ -98,12 +100,20 @@ def display_cluster_heatmap(df, tab_routes, tab_voxels=[], line_group="route_num
         if(dict_voxels[key]["cyclability_coeff"]):
             tab.append([vox_pos[0][0], vox_pos[0][1], dict_voxels[key]["cyclability_coeff"]])
 
-    dfdisplay = pd.DataFrame(tab, columns=["lat", "lon", "value"])
-    
+    return pd.DataFrame(tab, columns=["lat", "lon", "value"])
+
+
+
+def display_cluster_heatmap(df, tab_routes, tab_voxels=[], line_group="route_num", color=None):
+    dfdisplay = create_df_heatmap(df, tab_routes, tab_voxels=[], line_group="route_num", color=None)
+
     map = folium.Map(location=[dfdisplay.iloc[0]["lat"],dfdisplay.iloc[0]["lon"]], control_scale=True, zoom_start=11)
     HeatMap(data=dfdisplay.values.tolist(), max_zoom=13, radius=9, blur = 1, min_opacity = 0, max_val = 1).add_to(map)
-
-    '''fig = px.scatter_mapbox(dfdisplay, lat="lat", lon="lon",  color="value", size="value", zoom=10)
-    fig.show()'''
-
     return map
+
+
+def display_cluster_heatmap_mapbox(df, tab_routes, tab_voxels=[], line_group="route_num", color=None):
+    dfdisplay = create_df_heatmap(df, tab_routes, tab_voxels=[], line_group="route_num", color=None)
+
+    fig = px.scatter_mapbox(dfdisplay, lat="lat", lon="lon",  color="value", size="value", zoom=10)
+    fig.show()
