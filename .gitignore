@@ -12,3 +12,8 @@ cache/
 *.ox
 *.dict
 *.tab
+
+!osmnx_pathfinding_simplified.df
+!observations_matched_simplified.df
+!dbscan_observations.tab
+!voxels_clustered_osmnx.dict

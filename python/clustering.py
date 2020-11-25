@@ -17,6 +17,13 @@ def tab_clusters_to_dict(clusters):
 
 
 def cluster_properties(dict_cl, X, cl, metric=None):
+    if(metric != None):
+        silhouette = silhouette_score(X, cl, metric=metric)
+    else:
+        silhouette = silhouette_score(X, cl)
+    print("silhouette score :", silhouette)
+    print()
+
     mean = 0
     mini_clusters = []
     big_clusters = []
@@ -28,16 +35,10 @@ def cluster_properties(dict_cl, X, cl, metric=None):
                 mini_clusters.append(i)
             mean+=len(dict_cl[i])
 
-    if(metric != None):
-        silhouette = silhouette_score(X, cl, metric=metric)
-    else:
-        silhouette = silhouette_score(X, cl)
-
-    print(len(big_clusters), "big clusters:", big_clusters)
-    print(len(mini_clusters), "mini clusters :", mini_clusters)
-    print()
     print("mean size :", mean/(len(dict_cl)-1))
     print()
-    print("silhouette score :", silhouette)
+    print(len(big_clusters), "big clusters:", big_clusters)
+    print(len(mini_clusters), "mini clusters :", mini_clusters)
+
 
 
