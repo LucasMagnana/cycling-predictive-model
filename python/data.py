@@ -324,17 +324,18 @@ def normalize_route(v1, n):
         v1.insert(indice+1, new_point)
 
 
-def add_time_elapsed(file):
-    with open(file,'rb') as infile:
-        df = pickle.load(infile)
-    if("time_elapsed" not in df.columns):
-        tab_te = compute_time_elapsed(df)
-        if(len(tab_te)==len(df)):
-            df.insert(loc=2, column='time_elapsed', value=tab_te)
-            with open(file,'wb') as outfile:
-                pickle.dump(df, outfile)
-        else:
-            print("Dimension error.")
+def add_time_elapsed(file, nb_routes):
+    if(nb_routes > 0):
+        with open(file,'rb') as infile:
+            df = pickle.load(infile)
+        if("time_elapsed" not in df.columns):
+            tab_te = compute_time_elapsed(df)
+            if(len(tab_te)==len(df)):
+                df.insert(loc=2, column='time_elapsed', value=tab_te)
+                with open(file,'wb') as outfile:
+                    pickle.dump(df, outfile)
+            else:
+                print("Dimension error.")
 
     
 def compute_time_elapsed(df):
@@ -368,8 +369,9 @@ def add_speed(file):
 
 def compute_speed(df):
     tab_speed = []
-    for i in range(df.iloc[-1]["route_num"]+1):
+    for i in range(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]+1):
         df_temp = df[df["route_num"]==i]
+        print(len(df_temp))
         tab_speed.append(0)
         last_line = pd.DataFrame()
         for line in df_temp.iloc:
@@ -377,7 +379,7 @@ def compute_speed(df):
                 last_line = line
             else:
                 distance = geodesic((last_line[0],last_line[1]), (line[0], line[1])).meters
-                time = line["time_elapsed"]
+                time = line["time_elapsed"]-last_line["time_elapsed"]
 
                 if(time == 0):
                     tab_speed.append(-1)
@@ -387,6 +389,54 @@ def compute_speed(df):
 
                 last_line = line
     return tab_speed
+
+
+def load_veleval():
+    df = pd.DataFrame()
+    for i in range(1, 1110):
+        tree = ET.parse('data/veleval/GPX/data'+str(i)+'.gpx')
+        if(len(tree.getroot()) > 1):
+            route = []
+            root = tree.getroot()[1][0]
+            df_temp = pd.DataFrame(columns=['lat', 'lon'])
+            for child in root:
+                j=0
+                while("time" not in child[j].tag):
+                    j+=1
+                time = datetime.strptime(child[j].text, '%Y-%m-%dT%H:%M:%S.%fZ')
+                coord = child.attrib
+                coord['lat'] = float(coord['lat'])
+                coord['lon'] = float(coord['lon'])
+                route.append([coord['lat'], coord['lon'], time, i-1])
+            df = df.append(pd.DataFrame(route, columns=["lat", "lon", "time", "route_num"]))
+    return df
+
+
+def compute_average_speed(df, nb_points):
+    tab_speed = df["speed"].values
+
+    tab_last_speed = []
+    i=0
+
+    tab_avg_speed = []
+    for speed in tab_speed:
+        avg_speed = 0
+        if (len(tab_last_speed) == nb_points):
+            i+=1
+            if(i>=len(tab_last_speed)):
+                i=0
+            tab_last_speed[i] = speed
+        else:
+            i+=1
+            tab_last_speed.append(speed)
+            
+        for last_speed in tab_last_speed:
+            avg_speed += last_speed
+            
+        avg_speed /= len(tab_last_speed)
+        tab_avg_speed.append(avg_speed)
+    
+    return tab_avg_speed
 
 
 '''def bikepath_fusion(infile, outfile, nb_routes=1):
@@ -472,24 +522,3 @@ def harmonize_route(v1, v2):
     else:
         v1 += [v1[-1]]*diff
     return v1, v2'''
-
-
-def load_veleval():
-    df = pd.DataFrame()
-    for i in range(1, 1110):
-        tree = ET.parse('data/veleval/GPX/data'+str(i)+'.gpx')
-        if(len(tree.getroot()) > 1):
-            route = []
-            root = tree.getroot()[1][0]
-            df_temp = pd.DataFrame(columns=['lat', 'lon'])
-            for child in root:
-                j=0
-                while("time" not in child[j].tag):
-                    j+=1
-                time = datetime.strptime(child[j].text, '%Y-%m-%dT%H:%M:%S.%fZ')
-                coord = child.attrib
-                coord['lat'] = float(coord['lat'])
-                coord['lon'] = float(coord['lon'])
-                route.append([coord['lat'], coord['lon'], time, i-1])
-            df = df.append(pd.DataFrame(route, columns=["lat", "lon", "time", "route_num"]))
-    return df
