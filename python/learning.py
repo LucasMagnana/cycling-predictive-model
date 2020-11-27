@@ -70,14 +70,17 @@ def test_full_connected(df, network, dict_cluster, size_routes, cuda):
 def train_recursive(df, tab_clusters, loss, optimizer, network, size_data, cuda, nb_step, df_test=None):
     loss_tab = []
     predict_tab = []
+    nb_good_predict = 0
     print("start:", datetime.datetime.now().time())
     for s in range(nb_step):
 
-        if(s != 0 and s%(nb_step//4) == 0):
-            print("1/4:", datetime.datetime.now().time())
 
-        if(s>nb_step):
-            predict_tab.append(test_recursive(df_test, network, tab_clusters, size_data, cuda))
+        if(s > 0):
+            if(s%(nb_step//4) == 0):
+                print("1/4:", datetime.datetime.now().time())
+            
+            if(s%max(1, (nb_step//100))==0):
+                predict_tab.append(nb_good_predict/(s+1))
 
         key = -1
         route = []
@@ -103,6 +106,8 @@ def train_recursive(df, tab_clusters, loss, optimizer, network, size_data, cuda,
         if(cuda):
             output = output.cuda()
             target = target.cuda()
+        if(output.argmax(dim=1, keepdim=True).item() == target[0].item()):
+            nb_good_predict += 1
         l = loss(output, target)
         loss_tab.append(l.item())
         l.backward()
