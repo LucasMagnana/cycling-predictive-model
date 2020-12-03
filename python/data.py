@@ -358,6 +358,7 @@ def add_speed(file):
     with open(file,'rb') as infile:
         df = pickle.load(infile)
     if("speed" not in df.columns):
+        print("Warning : Adding speed !")
         tab_speed = compute_speed(df)
         if(len(tab_speed)==len(df)):
             df.insert(loc=2, column='speed', value=tab_speed)
@@ -437,6 +438,34 @@ def compute_average_speed(df, nb_points):
         tab_avg_speed.append(avg_speed)
     
     return tab_avg_speed
+
+def compute_average_acceleration(df, nb_points):
+    tab_speed= df["speed"].values
+
+    tab_last_accel = []
+    i=0
+    last_speed = 0
+    tab_avg_accel = []
+    for speed in tab_speed:
+        avg_accel = 0
+        if (len(tab_last_accel) == nb_points):
+            i+=1
+            if(i>=len(tab_last_accel)):
+                i=0
+            tab_last_accel[i] = speed-last_speed
+        else:
+            i+=1
+            tab_last_accel.append(speed-last_speed)
+            
+        for last_accel in tab_last_accel:
+            avg_accel += last_accel
+            
+        avg_accel /= len(tab_last_accel)
+        tab_avg_accel.append(avg_accel)
+
+        last_speed = speed
+    
+    return tab_avg_accel
 
 
 '''def bikepath_fusion(infile, outfile, nb_routes=1):
