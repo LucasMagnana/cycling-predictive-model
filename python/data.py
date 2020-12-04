@@ -45,6 +45,7 @@ def request_map_matching(df_route):
 
 
 def clean_dataframe(df):
+    print("Cleaning dataframe...")
     nb_empty = 0
     df_final = pd.DataFrame(columns=df.columns)
     for i in range(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]+1):
@@ -110,7 +111,6 @@ def rd_compression(df, start, end, dim=2, eps=1e-4):
     print(start, end)
     df_simplified = pd.DataFrame()
     for i in range(start, end):
-        print(i)
         route = df[df['route_num']==i].values
         if(len(route)>0):
             simplified = np.delete(route, range(dim, route.shape[1]), 1)
@@ -120,7 +120,11 @@ def rd_compression(df, start, end, dim=2, eps=1e-4):
             else:
                 df_temp = pd.DataFrame(simplified, columns=['lat', 'lon', 'time_elapsed'])
             df_temp["route_num"]=route[0][-1]
+            if(len(df_temp) == 0):
+                print(i, "bite")
             df_simplified = df_simplified.append(df_temp)
+        else:
+            print(i, "chatte")
     return df_simplified
 
 
@@ -324,11 +328,12 @@ def normalize_route(v1, n):
         v1.insert(indice+1, new_point)
 
 
-def add_time_elapsed(file, nb_routes):
+def add_time_elapsed(file, nb_routes=1):
     if(nb_routes > 0):
         with open(file,'rb') as infile:
             df = pickle.load(infile)
         if("time_elapsed" not in df.columns):
+            print("Warning : Adding time elapsed...")
             tab_te = compute_time_elapsed(df)
             if(len(tab_te)==len(df)):
                 df.insert(loc=2, column='time_elapsed', value=tab_te)
@@ -358,12 +363,16 @@ def add_speed(file):
     with open(file,'rb') as infile:
         df = pickle.load(infile)
     if("speed" not in df.columns):
-        print("Warning : Adding speed !")
+        print("Warning : Adding speed...")
         tab_speed = compute_speed(df)
         if(len(tab_speed)==len(df)):
-            df.insert(loc=2, column='speed', value=tab_speed)
+            df.insert(loc=3, column='speed', value=tab_speed)
             with open(file,'wb') as outfile:
                 pickle.dump(df, outfile)
+            '''df = df[df["speed"]>= 0]
+            df = clean_dataframe(df)
+            with open(file,'wb') as outfile:
+                pickle.dump(df, outfile)'''
         else:
             print("Dimension error.")
 
@@ -372,7 +381,6 @@ def compute_speed(df):
     tab_speed = []
     for i in range(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]+1):
         df_temp = df[df["route_num"]==i]
-        print(len(df_temp))
         tab_speed.append(0)
         last_line = pd.DataFrame()
         for line in df_temp.iloc:
@@ -383,6 +391,7 @@ def compute_speed(df):
                 time = line["time_elapsed"]-last_line["time_elapsed"]
 
                 if(time == 0):
+                    print("bite", i)
                     tab_speed.append(-1)
                 else:
                     tab_speed.append(distance/time)
