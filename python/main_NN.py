@@ -16,7 +16,7 @@ from RNN import *
 
 def main(args):
 
-    project_folder = "monresovelo"
+    project_folder = "veleval"
 
     cuda = False
     #  gpx_pathfindind_cycling
@@ -40,30 +40,17 @@ def main(args):
     df_voxels_train = pd.DataFrame()
     df_voxels_test = pd.DataFrame()
 
+    max_cluster = max(tab_clusters)+1
 
     for i in range(len(tab_routes_voxels)):
         nb_vox = 0
         tab_routes_voxels_int.append([])
         route = tab_routes_voxels[i]
         for vox in route:
-            if(nb_vox%args.voxels_frequency==0):
-                vox_str = vox.split(";")
-                vox_int = [int(vox_str[0]), int(vox_str[1])]
-                tab_points = voxels.get_voxel_points(vox_int)
-                #points = tab_points[0][:2]+tab_points[1][:2]+tab_points[2][:2]+tab_points[3][:2]
-                if vox not in dict_voxels :
-                    points = [-1]
-                else:
-                    points = [dict_voxels[vox]["cluster"]]
+            if(nb_vox%args.voxels_frequency==0): #(len(tab_routes_voxels_int[i])==0 or tab_routes_voxels_int[i][-1][0] != dict_voxels[vox]["cluster"]): 
+                points = [dict_voxels[vox]["cluster"]/max_cluster]
                 tab_routes_voxels_int[i].append(points)
             nb_vox += 1
-
-        '''tab_routes_voxels_int[i] = sorted(tab_routes_voxels_int[i], key=lambda k: dict_voxels[str(voxels.find_voxel_int([k[0],k[1]])[0])+";"+str(voxels.find_voxel_int([k[0],k[1]])[1])]["cyclability_coeff"])
-        
-        if(len(tab_routes_voxels_int[i])>50):
-            tab_routes_voxels_int[i] = tab_routes_voxels_int[i][:50]
-        
-        print(len(tab_routes_voxels_int[i]))'''
 
         df_temp = pd.DataFrame(tab_routes_voxels_int[i], dtype=object)
         df_temp["route_num"] = i
@@ -88,9 +75,9 @@ def main(args):
     learning_rate = args.lr
 
 
-    fc = NN(size_data, max(tab_clusters)+1)
-    rnn = RNN(size_data, max(tab_clusters)+1)
-    lstm = RNN_LSTM(size_data, max(tab_clusters)+1, args.hidden_size, args.num_layers)
+    fc = NN(size_data, max_cluster)
+    rnn = RNN(size_data, max_cluster)
+    lstm = RNN_LSTM(size_data, max_cluster, args.hidden_size, args.num_layers)
 
 
     network = lstm
