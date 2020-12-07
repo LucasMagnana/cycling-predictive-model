@@ -48,7 +48,7 @@ def main(args):
         route = tab_routes_voxels[i]
         for vox in route:
             if(nb_vox%args.voxels_frequency==0): #(len(tab_routes_voxels_int[i])==0 or tab_routes_voxels_int[i][-1][0] != dict_voxels[vox]["cluster"]): 
-                points = [dict_voxels[vox]["cluster"]/max_cluster]
+                points = [dict_voxels[vox]["cluster"]]
                 tab_routes_voxels_int[i].append(points)
             nb_vox += 1
 
@@ -77,7 +77,7 @@ def main(args):
 
     fc = NN(size_data, max_cluster)
     rnn = RNN(size_data, max_cluster)
-    lstm = RNN_LSTM(size_data, max_cluster, args.hidden_size, args.num_layers)
+    lstm = RNN_LSTM(size_data, max_cluster, args.hidden_size, args.num_layers, args.bidirectional)
 
 
     network = lstm
@@ -101,12 +101,15 @@ def main(args):
         print("Saving network...")
         data.check_file("files/"+project_folder+"/neural_networks/network_temp.pt", [])
         torch.save(network.state_dict(), args.path+"files/"+project_folder+"/neural_networks/network_temp.pt")
-
+        
+    
     plt.plot(tab_loss)
     plt.ylabel('Error')
     plt.show()
-
-    plt.plot(tab_predict)
+    
+    plt.plot(tab_predict[0], color='blue', label='train')
+    plt.plot(tab_predict[1], color='red', label='test')
+    plt.legend(loc='upper right')
     plt.ylabel('Prediction')
     plt.show()
 
@@ -148,5 +151,6 @@ if __name__ == "__main__":
     parse.add_argument('--num-samples', type=int, default=75000, help="number of data (chosen randomly) to send to the network")
     parse.add_argument('--lr', type=float, default=5e-4, help='learning rate of the algorithm')
     parse.add_argument('--percentage-test', type=int, default=0, help='percentage of data to use as testing')
+    parse.add_argument('--bidirectional', type=bool, default=False, help='change the LSTM in a bidirectional one')
     
     main(parse.parse_args())
