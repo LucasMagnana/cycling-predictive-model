@@ -10,152 +10,65 @@ from NN import *
 from RNN import *
 import datetime
 
-def train_full_connected(df, tab_clusters, loss, optimizer, network, size_routes, cuda, nb_step):
-    loss_tab = []
-    pca = PCA(n_components=1)
-    
-    for _ in range(nb_step//30):
-        input = []
-        target = []
-        for _ in range(30):
-            num_route = random.randint(0, len(tab_clusters)-1)
-            key = tab_clusters[num_route]
-            if(key != -1):
-                route = data.dataframe_to_array(df[df["route_num"]==num_route+1])
-                data.normalize_route(route, size_routes)
-                route = pca.fit_transform(route)
-                input.append(route)
-                target.append(key)
-        input = torch.Tensor(input).squeeze(2)
-        if(cuda):
-            input = input.cuda()
-        optimizer.zero_grad()
-        output = network(input)
-        target = torch.Tensor(target).long()
-        if(cuda):
-            output = output.cuda()
-            target = target.cuda()
-        l = loss(output, target)
-        loss_tab.append(l.item())
-        l.backward()
-        optimizer.step()
-    return(loss_tab)
+
+def train(data, tab_num_train, tab_num_test, tab_clusters, loss, optimizer, network, size_data, nb_step):
 
 
-def test_full_connected(df, network, dict_cluster, size_routes, cuda):
-    good_predict = 0
-    nb_predict = 0
-    pca = PCA(n_components=1)
-    input = []
-    for key in dict_cluster:
-        if(key != -1):
-            tab_routes = []
-            for num_route in dict_cluster[key]:
-                route = data.dataframe_to_array(df[df["route_num"]==num_route+1])
-                data.normalize_route(route, size_routes)
-                route = pca.fit_transform(route)
-                tab_routes.append(route)
-            input = torch.Tensor(tab_routes).squeeze(2)
-            if(cuda):
-                input = input.cuda()
-            output = network(input)
-            pred = output.argmax(dim=1, keepdim=True)
-            for i in range(pred.shape[0]):
-                if(key == pred[i].item()):
-                    good_predict += 1
-                nb_predict += 1
+    tens_clusters = torch.Tensor(tab_clusters)
 
-    return good_predict/nb_predict
-
-
-def train_recursive(df, tab_clusters, loss, optimizer, network, size_data, cuda, nb_step, df_test=None):
     loss_tab = [[], []]
     sum_loss = 0
     predict_tab = [[],[]]
-    nb_good_predict = 0
     quarter = 1
     print("start:", datetime.datetime.now().time())
     for s in range(nb_step+1):
-
-
         if(s > 0):
             if(s%(nb_step//4) == 0):
                 print(str(quarter)+"/4:", datetime.datetime.now().time())
-                '''plt.plot(predict_tab[0], color='blue', label='train')
-                plt.plot(predict_tab[1], color='red', label='test')
-                plt.legend(loc='upper left')
-                plt.ylabel('Prediction')
-                plt.show()'''
                 quarter+=1
             
             if(s%max(1, (nb_step//30))==0):
-                predict_tab[0].append(nb_good_predict/(s+1))
-                loss_tab[0].append(sum_loss/(s+1))
-                
-                predict_test, loss_test = test_recursive(df_test, network, tab_clusters, size_data, loss, cuda)
-                predict_tab[1].append(predict_test)
-                loss_tab[1].append(loss_test)
+                predict_train, loss_train = test(data, tab_num_train, network, tab_clusters, size_data, loss)
+                predict_tab[1].append(predict_train)
+                loss_tab[1].append(loss_train)
 
-        key = -1
-        route = []
-        while(key == -1 or len(route) == 0):
-            num_route = random.randint(df.iloc[0]["route_num"], df.iloc[-1]["route_num"])
-            key = tab_clusters[num_route]
-            route = data.dataframe_to_array(df[df["route_num"]==num_route], size_data)
-            
-        tens_route = torch.Tensor(route).unsqueeze(1)
-        if(cuda):
-            tens_route = tens_route.cuda()
+                if(len(tab_num_test)>0):
+                    predict_test, loss_test = test(data, tab_num_test, network, tab_clusters, size_data, loss)
+                    predict_tab[1].append(predict_test)
+                    loss_tab[1].append(loss_test)
 
-        hidden = network.initHidden()
-        target = torch.Tensor([key]).long()
+        tens_num_batch = torch.LongTensor(random.sample(tab_num_train, 30))
+        tens_batch = torch.index_select(data, 0, tens_num_batch)
+
+        target = torch.index_select(tens_clusters, 0, tens_num_batch).long()
+
         #network.zero_grad()
         optimizer.zero_grad()
-        for i in range(tens_route.shape[0]):
-            if(isinstance(network, RNN_LSTM)):
-                input = tens_route[i].unsqueeze(1)
-            else:
-                input = tens_route[i]
-            output, hidden = network(input, hidden)
-        if(cuda):
-            output = output.cuda()
-            target = target.cuda()
-        if(output.argmax(dim=1, keepdim=True).item() == target[0].item()):
-            nb_good_predict += 1
+        output = network(tens_batch)
+        
         l = loss(output, target)
         sum_loss += l.item()
         l.backward()
         optimizer.step()
-        '''for p in network.parameters():
-            p.data.add_(-0.005, p.grad.data)'''
+
     return loss_tab, predict_tab
 
-def test_recursive(df, network, tab_clusters, size_data, loss=None, cuda=False):
+def test(data, tab_num, network, tab_clusters, size_data, loss=None):
     good_predict = 0
     nb_predict = 0
     sum_loss = 0
-    for i in range(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]+1):
-        route = data.dataframe_to_array(df[df["route_num"]==i], size_data)
-        if(tab_clusters[i] != -1 and len(route)>0):
-            tens_route = torch.Tensor(route).unsqueeze(1)
-            if(cuda):
-                tens_route = tens_route.cuda()
-
-            hidden = network.initHidden()
-            for j in range(tens_route.shape[0]):
-                if(isinstance(network, RNN_LSTM)):
-                    input = tens_route[j].unsqueeze(1)
-                else:
-                    input = tens_route[j]
-                output, hidden = network(input, hidden)
-                
-            if(loss != None):
-                l = loss(output, torch.Tensor([tab_clusters[i]]).long())
-                sum_loss += l.item()
-            pred = output.argmax(dim=1, keepdim=True)
-            if(tab_clusters[i] == pred.item()):
-                good_predict += 1
-            nb_predict += 1
+    for i in tab_num:
+        tens_route = data[i].unsqueeze(0)
+        target = torch.LongTensor(tab_clusters[i])
+        output = network(tens_route)
+            
+        if(loss != None):
+            l = loss(output, torch.LongTensor([tab_clusters[i]]))
+            sum_loss += l.item()
+        pred = output.argmax(dim=1, keepdim=True)
+        if(tab_clusters[i] == pred.item()):
+            good_predict += 1
+        nb_predict += 1
     print(good_predict, nb_predict)
     return good_predict/nb_predict, sum_loss/nb_predict
 
@@ -171,18 +84,3 @@ def test_random(df, tab_clusters):
                 good_predict += 1
             nb_predict += 1
     return good_predict/nb_predict
-
-
-def train(df, tab_clusters, loss, optimizer, network, size_data, cuda, nb_step, df_test=None):
-    if(isinstance(network, RNN) or isinstance(network, RNN_LSTM)):
-        return train_recursive(df, tab_clusters, loss, optimizer, network, size_data, cuda, nb_step, df_test)
-    else:
-        return train_full_connected(df, tab_clusters, loss, optimizer, network, size_data, cuda, nb_step)
-
-def test(df, network, tab_clusters, size_data, loss=None, cuda=False):
-    if(isinstance(network, RNN) or isinstance(network, RNN_LSTM)):
-        return test_recursive(df, network, tab_clusters, size_data, loss, cuda)
-    elif(isinstance(network, NN)):
-        return test_full_connected(df, network, tab_clusters, size_data, cuda)
-    else:
-        return test_random(df, tab_clusters)

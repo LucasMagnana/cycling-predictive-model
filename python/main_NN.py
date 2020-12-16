@@ -19,7 +19,6 @@ def main(args):
     
     project_folder = "veleval"
 
-    cuda = False
     #  gpx_pathfindind_cycling
     with open(args.path+"files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
         df_pathfinding = pickle.load(infile)
@@ -51,54 +50,39 @@ def main(args):
         if(key != -1):
             tab_num_test += random.sample(dict_clusters[key], round(args.percentage_test/100*len(dict_clusters[key])))
             
-    with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
-        tab_num_test = pickle.load(infile)
+    '''with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
+        tab_num_test = pickle.load(infile)'''
     
     print(len(tab_num_test))
+    tab_num_train = list(range(len(tab_routes_voxels)))
+    tab_num_noise = [i for i, e in enumerate(tab_clusters) if e == -1]
+    tab_num_train = [x for x in tab_num_train if x not in tab_num_test]
+    tab_num_train = [x for x in tab_num_train if x not in tab_num_noise]
           
 
     for i in range(len(tab_routes_voxels)):
         nb_vox = 0
         tab_routes_voxels_int.append([])
-        route = tab_routes_voxels[i]
-        for vox in route:
+        route_voxels = tab_routes_voxels[i]
+        for vox in route_voxels:
             if(nb_vox%args.voxels_frequency==0): 
                 points = [dict_voxels[vox]["cluster"]+1]
                 tab_routes_voxels_int[i].append(points)
             nb_vox += 1
-        
-        df_temp = pd.DataFrame(tab_routes_voxels_int[i], dtype=object)
-        df_temp["route_num"] = i
-        df_voxels = df_voxels.append(df_temp)
-        
-        if(i in tab_num_test):
-            df_voxels_test = df_voxels_test.append(df_temp)
-        else:
-            df_voxels_train = df_voxels_train.append(df_temp)
+        tab_routes_voxels_int[i] = torch.Tensor(tab_routes_voxels_int[i])
             
+    print(len(tab_routes_voxels_int[1]))
 
-    #print(len(df_voxels), len(df_voxels_train), len(df_voxels_test))
-    print(tab_routes_voxels_int[0])
-
-    df_train = df_voxels_train
-    df_test = df_voxels_test
-    
-    if(len(df_test) == 0):
-        df_test = df_train
+    padded_data = torch.nn.utils.rnn.pad_sequence(tab_routes_voxels_int, batch_first=True)
 
     size_data = 1
 
     learning_rate = args.lr
 
-    fc = NN(size_data, max_cluster)
-    rnn = RNN(size_data, max_cluster)
     lstm = RNN_LSTM(size_data, max_cluster, args.hidden_size, args.num_layers, args.bidirectional, args.dropout)
 
 
     network = lstm
-
-    if(cuda):
-        network = network.cuda()
 
     optimizer = torch.optim.Adam(network.parameters(), lr=learning_rate)
     loss = nn.NLLLoss()
@@ -106,17 +90,17 @@ def main(args):
     '''network.load_state_dict(torch.load(args.path+"files/"+project_folder+"/neural_networks/saved/network_temp.pt"))
     network.eval()'''
 
-    tab_loss, tab_predict = learning.train(df_train, tab_clusters, loss, optimizer, network, size_data, cuda, args.num_samples, df_test)
+    tab_loss, tab_predict = learning.train(padded_data, tab_num_train, tab_num_test, tab_clusters, loss, optimizer, network, size_data, args.num_samples)
 
 
-    '''g_predict = learning.test(df_test, None, tab_clusters, size_data, loss, cuda)
+    '''g_predict = learning.test(df_test, None, tab_clusters, size_data, loss)
     print("Random:", g_predict*100, "%")'''
     
-    g_predict, _ = learning.test(df_train, network, tab_clusters, size_data)
+    g_predict, _ = learning.test(padded_data, tab_num_train, network, tab_clusters, size_data)
     print("Good train predict:", g_predict*100, "%")
     
     if(args.percentage_test > 0):
-        g_predict, _ = learning.test(df_test, network, tab_clusters, size_data)
+        g_predict, _ = learning.test(padded_data, tab_num_test, network, tab_clusters, size_data)
         print("Good test predict:", g_predict*100, "%")
     
     if(g_predict > 0.1):

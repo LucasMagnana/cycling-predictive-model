@@ -45,7 +45,7 @@ class RNN_LSTM(nn.Module):
         # The LSTM takes word embeddings as inputs, and outputs hidden states
         # with dimensionality hidden_size.
         self.lstm = nn.LSTM(input_size, self.hidden_size, num_layers=self.num_layers, bidirectional=self.bidirectional, 
-                           dropout=dropout)
+                           dropout=dropout, batch_first=True)
 
         # The linear layer that maps from hidden state space to tag space
         self.out1 = nn.Linear(self.hidden_size+self.bidirectional*self.hidden_size, self.hidden_size//2)
@@ -55,15 +55,18 @@ class RNN_LSTM(nn.Module):
         self.softmax = nn.LogSoftmax(dim=1)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, input, hidden):
-        output, hidden = self.lstm(input, hidden)
-        output = self.dropout(self.out1(output.squeeze(0)))
+    def forward(self, input):
+        input_lengths = torch.count_nonzero(input, dim=1).squeeze(1)
+        input_packed = torch.nn.utils.rnn.pack_padded_sequence(input, lengths=input_lengths, batch_first=True, enforce_sorted=False)
+
+        output_packed, (hn, cn) = self.lstm(input_packed)
+        output = self.dropout(self.out1(hn[-1]))
         output = self.out2(output)
         #output = self.out3(output)
         output = self.softmax(output)
-        return output, hidden
+        return output
 
     def initHidden(self):
         #return torch.zeros(1, self.hidden_size).unsqueeze(0)
         
-        return (torch.randn(self.num_layers+self.bidirectional*self.num_layers, 1, self.hidden_size), torch.randn(self.num_layers+self.bidirectional*self.num_layers, 1, self.hidden_size))
+        return (torch.randn(self.num_layers+self.bidirectional*self.num_layers, 30, self.hidden_size), torch.randn(self.num_layers+self.bidirectional*self.num_layers, 30, self.hidden_size))
