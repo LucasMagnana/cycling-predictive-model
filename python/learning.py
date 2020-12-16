@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 import data as data
 import numpy as np
+import matplotlib.pyplot as plt
 import random
 from NN import *
 from RNN import *
@@ -68,20 +69,32 @@ def test_full_connected(df, network, dict_cluster, size_routes, cuda):
 
 
 def train_recursive(df, tab_clusters, loss, optimizer, network, size_data, cuda, nb_step, df_test=None):
-    loss_tab = []
+    loss_tab = [[], []]
+    sum_loss = 0
     predict_tab = [[],[]]
     nb_good_predict = 0
+    quarter = 1
     print("start:", datetime.datetime.now().time())
-    for s in range(nb_step):
+    for s in range(nb_step+1):
 
 
         if(s > 0):
             if(s%(nb_step//4) == 0):
-                print("1/4:", datetime.datetime.now().time())
+                print(str(quarter)+"/4:", datetime.datetime.now().time())
+                '''plt.plot(predict_tab[0], color='blue', label='train')
+                plt.plot(predict_tab[1], color='red', label='test')
+                plt.legend(loc='upper left')
+                plt.ylabel('Prediction')
+                plt.show()'''
+                quarter+=1
             
-            if(s%max(1, (nb_step//10))==0):
+            if(s%max(1, (nb_step//30))==0):
                 predict_tab[0].append(nb_good_predict/(s+1))
-                predict_tab[1].append(test_recursive(df_test, network, tab_clusters, size_data, cuda))
+                loss_tab[0].append(sum_loss/(s+1))
+                
+                predict_test, loss_test = test_recursive(df_test, network, tab_clusters, size_data, loss, cuda)
+                predict_tab[1].append(predict_test)
+                loss_tab[1].append(loss_test)
 
         key = -1
         route = []
@@ -110,16 +123,17 @@ def train_recursive(df, tab_clusters, loss, optimizer, network, size_data, cuda,
         if(output.argmax(dim=1, keepdim=True).item() == target[0].item()):
             nb_good_predict += 1
         l = loss(output, target)
-        loss_tab.append(l.item())
+        sum_loss += l.item()
         l.backward()
         optimizer.step()
         '''for p in network.parameters():
             p.data.add_(-0.005, p.grad.data)'''
     return loss_tab, predict_tab
 
-def test_recursive(df, network, tab_clusters, size_data, cuda):
+def test_recursive(df, network, tab_clusters, size_data, loss=None, cuda=False):
     good_predict = 0
     nb_predict = 0
+    sum_loss = 0
     for i in range(df.iloc[0]["route_num"], df.iloc[-1]["route_num"]+1):
         route = data.dataframe_to_array(df[df["route_num"]==i], size_data)
         if(tab_clusters[i] != -1 and len(route)>0):
@@ -134,11 +148,16 @@ def test_recursive(df, network, tab_clusters, size_data, cuda):
                 else:
                     input = tens_route[j]
                 output, hidden = network(input, hidden)
+                
+            if(loss != None):
+                l = loss(output, torch.Tensor([tab_clusters[i]]).long())
+                sum_loss += l.item()
             pred = output.argmax(dim=1, keepdim=True)
             if(tab_clusters[i] == pred.item()):
                 good_predict += 1
             nb_predict += 1
-    return good_predict/nb_predict
+    print(good_predict, nb_predict)
+    return good_predict/nb_predict, sum_loss/nb_predict
 
 
 def test_random(df, tab_clusters):
@@ -160,9 +179,9 @@ def train(df, tab_clusters, loss, optimizer, network, size_data, cuda, nb_step, 
     else:
         return train_full_connected(df, tab_clusters, loss, optimizer, network, size_data, cuda, nb_step)
 
-def test(df, network, tab_clusters, size_data, cuda):
+def test(df, network, tab_clusters, size_data, loss=None, cuda=False):
     if(isinstance(network, RNN) or isinstance(network, RNN_LSTM)):
-        return test_recursive(df, network, tab_clusters, size_data, cuda)
+        return test_recursive(df, network, tab_clusters, size_data, loss, cuda)
     elif(isinstance(network, NN)):
         return test_full_connected(df, network, tab_clusters, size_data, cuda)
     else:

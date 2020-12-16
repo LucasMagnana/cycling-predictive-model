@@ -12,10 +12,11 @@ import random
 
 from NN import *
 from RNN import *
+import clustering as cl
 
 
 def main(args):
-
+    
     project_folder = "veleval"
 
     cuda = False
@@ -41,28 +42,43 @@ def main(args):
     df_voxels_test = pd.DataFrame()
 
     max_cluster = max(tab_clusters)+1
+    
+    tab_num_test = []
+        
+    dict_clusters = cl.tab_clusters_to_dict(tab_clusters)
+    
+    for key in dict_clusters:
+        if(key != -1):
+            tab_num_test += random.sample(dict_clusters[key], round(args.percentage_test/100*len(dict_clusters[key])))
+            
+    with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
+        tab_num_test = pickle.load(infile)
+    
+    print(len(tab_num_test))
+          
 
     for i in range(len(tab_routes_voxels)):
         nb_vox = 0
         tab_routes_voxels_int.append([])
         route = tab_routes_voxels[i]
         for vox in route:
-            if(nb_vox%args.voxels_frequency==0): #(len(tab_routes_voxels_int[i])==0 or tab_routes_voxels_int[i][-1][0] != dict_voxels[vox]["cluster"]): 
-                points = [dict_voxels[vox]["cluster"]]
+            if(nb_vox%args.voxels_frequency==0): 
+                points = [dict_voxels[vox]["cluster"]+1]
                 tab_routes_voxels_int[i].append(points)
             nb_vox += 1
-
+        
         df_temp = pd.DataFrame(tab_routes_voxels_int[i], dtype=object)
         df_temp["route_num"] = i
         df_voxels = df_voxels.append(df_temp)
         
-        proba_test = random.random()
-        if(proba_test >= args.percentage_test/100):
-            df_voxels_train = df_voxels_train.append(df_temp)
-        else:
+        if(i in tab_num_test):
             df_voxels_test = df_voxels_test.append(df_temp)
+        else:
+            df_voxels_train = df_voxels_train.append(df_temp)
+            
 
     #print(len(df_voxels), len(df_voxels_train), len(df_voxels_test))
+    print(tab_routes_voxels_int[0])
 
     df_train = df_voxels_train
     df_test = df_voxels_test
@@ -74,10 +90,9 @@ def main(args):
 
     learning_rate = args.lr
 
-
     fc = NN(size_data, max_cluster)
     rnn = RNN(size_data, max_cluster)
-    lstm = RNN_LSTM(size_data, max_cluster, args.hidden_size, args.num_layers, args.bidirectional)
+    lstm = RNN_LSTM(size_data, max_cluster, args.hidden_size, args.num_layers, args.bidirectional, args.dropout)
 
 
     network = lstm
@@ -87,30 +102,44 @@ def main(args):
 
     optimizer = torch.optim.Adam(network.parameters(), lr=learning_rate)
     loss = nn.NLLLoss()
+    
+    '''network.load_state_dict(torch.load(args.path+"files/"+project_folder+"/neural_networks/saved/network_temp.pt"))
+    network.eval()'''
 
     tab_loss, tab_predict = learning.train(df_train, tab_clusters, loss, optimizer, network, size_data, cuda, args.num_samples, df_test)
 
 
-    g_predict = learning.test(df_test, None, tab_clusters, size_data, cuda)
-    print("Random:", g_predict*100, "%")
-
-    g_predict = learning.test(df_test, network, tab_clusters, size_data, cuda)
-    print("Good predict:", g_predict*100, "%")
+    '''g_predict = learning.test(df_test, None, tab_clusters, size_data, loss, cuda)
+    print("Random:", g_predict*100, "%")'''
     
-    if(g_predict > 0.8):
+    g_predict, _ = learning.test(df_train, network, tab_clusters, size_data)
+    print("Good train predict:", g_predict*100, "%")
+    
+    if(args.percentage_test > 0):
+        g_predict, _ = learning.test(df_test, network, tab_clusters, size_data)
+        print("Good test predict:", g_predict*100, "%")
+    
+    if(g_predict > 0.1):
         print("Saving network...")
-        data.check_file("files/"+project_folder+"/neural_networks/network_temp.pt", [])
+        data.check_file(args.path+"files/"+project_folder+"/neural_networks/network_temp.pt", [])
         torch.save(network.state_dict(), args.path+"files/"+project_folder+"/neural_networks/network_temp.pt")
+        with open(args.path+"files/"+project_folder+"/neural_networks/num_test.tab",'wb') as outfile:
+            pickle.dump(tab_num_test, outfile)
+        with open(args.path+"files/"+project_folder+"/neural_networks/network.param",'wb') as outfile:
+            pickle.dump(args, outfile)
         
     
-    plt.plot(tab_loss)
+    
+    plt.plot(tab_loss[0], label='train')
+    plt.plot(tab_loss[1], label='test')
     plt.ylabel('Error')
+    plt.legend(loc='upper left')
     plt.show()
     
     plt.plot(tab_predict[0], color='blue', label='train')
     plt.plot(tab_predict[1], color='red', label='test')
-    plt.legend(loc='upper right')
     plt.ylabel('Prediction')
+    plt.legend(loc='upper left')
     plt.show()
 
     '''import torch
@@ -152,5 +181,6 @@ if __name__ == "__main__":
     parse.add_argument('--lr', type=float, default=5e-4, help='learning rate of the algorithm')
     parse.add_argument('--percentage-test', type=int, default=0, help='percentage of data to use as testing')
     parse.add_argument('--bidirectional', type=bool, default=False, help='change the LSTM in a bidirectional one')
+    parse.add_argument('--dropout', type=float, default=0, help='set the dropout layers parameter')
     
     main(parse.parse_args())
