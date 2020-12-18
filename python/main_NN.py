@@ -70,8 +70,6 @@ def main(args):
                 tab_routes_voxels_int[i].append(points)
             nb_vox += 1
         tab_routes_voxels_int[i] = torch.Tensor(tab_routes_voxels_int[i])
-            
-    print(len(tab_routes_voxels_int[1]))
 
     padded_data = torch.nn.utils.rnn.pad_sequence(tab_routes_voxels_int, batch_first=True)
 

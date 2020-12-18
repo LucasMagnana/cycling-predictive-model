@@ -29,8 +29,8 @@ def train(data, tab_num_train, tab_num_test, tab_clusters, loss, optimizer, netw
             
             if(s%max(1, (nb_step//30))==0):
                 predict_train, loss_train = test(data, tab_num_train, network, tab_clusters, size_data, loss)
-                predict_tab[1].append(predict_train)
-                loss_tab[1].append(loss_train)
+                predict_tab[0].append(predict_train)
+                loss_tab[0].append(loss_train)
 
                 if(len(tab_num_test)>0):
                     predict_test, loss_test = test(data, tab_num_test, network, tab_clusters, size_data, loss)
@@ -69,7 +69,7 @@ def test(data, tab_num, network, tab_clusters, size_data, loss=None):
         if(tab_clusters[i] == pred.item()):
             good_predict += 1
         nb_predict += 1
-    print(good_predict, nb_predict)
+    #print(good_predict, nb_predict)
     return good_predict/nb_predict, sum_loss/nb_predict
 
 

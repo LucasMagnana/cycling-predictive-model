@@ -17,3 +17,4 @@ cache/
 !observations_matched_simplified.df
 !dbscan_observations.tab
 !voxels_clustered_osmnx.dict
+!num_test.tab

@@ -48,7 +48,7 @@ class RNN_LSTM(nn.Module):
                            dropout=dropout, batch_first=True)
 
         # The linear layer that maps from hidden state space to tag space
-        self.out1 = nn.Linear(self.hidden_size+self.bidirectional*self.hidden_size, self.hidden_size//2)
+        self.out1 = nn.Linear(self.hidden_size, output_size)
         self.out2 = nn.Linear(self.hidden_size//2, output_size)
         self.out3 = nn.Linear(self.hidden_size//2, output_size)
 
@@ -60,8 +60,8 @@ class RNN_LSTM(nn.Module):
         input_packed = torch.nn.utils.rnn.pack_padded_sequence(input, lengths=input_lengths, batch_first=True, enforce_sorted=False)
 
         output_packed, (hn, cn) = self.lstm(input_packed)
-        output = self.dropout(self.out1(hn[-1]))
-        output = self.out2(output)
+        output = self.out1(hn[-1])
+        #output = self.out2(output)
         #output = self.out3(output)
         output = self.softmax(output)
         return output
