@@ -109,6 +109,10 @@ def main(args):
             pickle.dump(tab_num_test, outfile)
         with open(args.path+"files/"+project_folder+"/neural_networks/network.param",'wb') as outfile:
             pickle.dump(args, outfile)
+        with open(args.path+"files/"+project_folder+"/neural_networks/loss.tab",'wb') as outfile:
+            pickle.dump(tab_loss, outfile)
+        with open(args.path+"files/"+project_folder+"/neural_networks/predict.tab",'wb') as outfile:
+            pickle.dump(tab_predict, outfile)
         
     
     

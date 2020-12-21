@@ -18,3 +18,5 @@ cache/
 !dbscan_observations.tab
 !voxels_clustered_osmnx.dict
 !num_test.tab
+!loss.tab
+!predict.tab
