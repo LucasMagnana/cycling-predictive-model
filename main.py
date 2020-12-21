@@ -39,16 +39,25 @@ with open("files/"+project_folder+"/data_processed/observations_matched_simplifi
     df_simplified = pickle.load(infile)
 with open("files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
     df_pathfinding = pickle.load(infile)       
-tab_routes_voxels_pathfinding, _, dict_voxels_pathfinding = voxel.generate_voxels(df_pathfinding, df_pathfinding.iloc[0]["route_num"], df_pathfinding.iloc[-1]["route_num"])
-tab_routes_voxels_pathfinding_global = voxel.get_tab_routes_voxels_global(dict_voxels_pathfinding, df_pathfinding.iloc[-1]["route_num"], df_pathfinding.iloc[0]["route_num"])
-
+tab_routes_voxels_pathfinding, _, _ = voxel.generate_voxels(df_pathfinding, df_pathfinding.iloc[0]["route_num"], df_pathfinding.iloc[-1]["route_num"])
 
 with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
-    G = pickle.load(infile)
+    G_1 = pickle.load(infile)
 with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
-    G_base = pickle.load(infile)
-nodes, _ = ox.graph_to_gdfs(G)
-tree = KDTree(nodes[['y', 'x']], metric='euclidean')
+    G_base_1 = pickle.load(infile)
+nodes_1, _ = ox.graph_to_gdfs(G_1)
+tree_1 = KDTree(nodes_1[['y', 'x']], metric='euclidean')
+
+if(project_folder == "veleval"):
+    with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
+        G_2 = pickle.load(infile)
+    with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
+        G_base_2 = pickle.load(infile)
+    nodes_2, _ = ox.graph_to_gdfs(G_2)
+    tree_2 = KDTree(nodes_2[['y', 'x']], metric='euclidean')
+
+
+
 
 data.check_file("files/"+project_folder+"/city_graphs/graph_modifications.dict", {})
 with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'rb') as infile:
@@ -63,7 +72,7 @@ with open("./files/"+project_folder+"/clustering/dbscan_observations.dict",'rb')
     dict_cluster = pickle.load(infile)
 dict_clusters = cl.tab_clusters_to_dict(tab_clusters)
 with open("./files/"+project_folder+"/clustering/voxels_clustered_osmnx.dict",'rb') as infile:
-    dict_voxels = pickle.load(infile)
+    dict_voxels_clustered = pickle.load(infile)
 with open("./files/"+project_folder+"/neural_networks/saved/network.param",'rb') as infile:
     param = pickle.load(infile)
 with open("./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
@@ -102,15 +111,25 @@ for i in tab_num_test: #len(tab_clusters)):
     rand = random.uniform(-deviation, deviation)
     f_point[1] += rand
 
-    if(d_point[0] > 45.5 or project_folder != "veleval"):
+    if(project_folder == "veleval" and d_point[0] <= 45.5):
+        G = G_2
+        nodes = nodes_2
+        tree = tree_2
+        G_base = G_base_2
+    else:
+        G = G_1
+        nodes = nodes_1
+        tree = tree_1
+        G_base = G_base_1
 
-        df_route, cl, nb_new_cluster = validation.find_cluster(d_point, f_point, network, param.voxels_frequency, df_pathfinding, dict_voxels, 
-                                    kmeans, tree, G, False)
-        #print(cl, tab_clusters[i])
-        if(cl == tab_clusters[i]):
-            print("good predict")
-        dp.display_mapbox(df_route)
-            #dp.display_cluster_heatmap_mapbox(df_simplified, dict_cluster[cl])
+    df_route, cl, nb_new_cluster = validation.find_cluster(d_point, f_point, network, param.voxels_frequency, df_pathfinding, dict_voxels_clustered, 
+                                kmeans, tree, G, nodes)
+    #print(cl, tab_clusters[i])
+    if(cl == tab_clusters[i]):
+        print("good predict")
+        #dp.display_cluster_heatmap_mapbox(df_simplified, dict_cluster[cl])
+    #dp.display_mapbox(df_route)
+    #dp.display(df_temp)
 
 
     ################################################################################_
@@ -169,7 +188,7 @@ for i in tab_num_test: #len(tab_clusters)):
 
 
 
-    route = data.pathfind_route_osmnx(d_point, f_point, tree, G)
+    route = data.pathfind_route_osmnx(d_point, f_point, tree, G, nodes)
     route_coord = [[G.nodes[x]["x"], G.nodes[x]["y"]] for x in route]
     route_coord = [x + [1, 2] for x in route_coord]
     df_route_modified = pd.DataFrame(route_coord, columns=["lon", "lat", "route_num", "type"])
@@ -204,6 +223,8 @@ for i in tab_num_test: #len(tab_clusters)):
     tab_coeff_modified.append(1-min(coeff_modified))
 
     tab_diff_coeff.append((1-min(coeff_modified))-(1-min(coeff_simplified)))
+
+    print(tab_diff_coeff[-1])
 
     #print(1-min(coeff_simplified) <= 1-min(coeff_modified))
 

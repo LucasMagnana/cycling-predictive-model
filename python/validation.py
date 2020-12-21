@@ -8,11 +8,11 @@ import python.voxels as voxels
 import python.data as data
 
 
-def find_cluster(d_point, f_point, network, voxels_frequency, df, dict_voxels, clustering, tree, G, cuda):
+def find_cluster(d_point, f_point, network, voxels_frequency, df, dict_voxels, clustering, tree, G, nodes):
 
     nb_new_cluster = 0
 
-    route = data.pathfind_route_osmnx(d_point, f_point, tree, G)
+    route = data.pathfind_route_osmnx(d_point, f_point, tree, G, nodes)
     route_coord = [[G.nodes[x]["y"], G.nodes[x]["x"]] for x in route]
     route_coord = [x + [0] for x in route_coord]
 
@@ -39,7 +39,6 @@ def find_cluster(d_point, f_point, network, voxels_frequency, df, dict_voxels, c
     #print(route, tab_voxels_int)
     route = tab_voxels_int #torch.nn.utils.rnn.pad_sequence(tab_voxels_int, batch_first=True)
     tens_route = route.unsqueeze(0)
-    print(tens_route)
 
     output = network(tens_route)
     pred = output.argmax(dim=1, keepdim=True)

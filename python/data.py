@@ -230,7 +230,7 @@ def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxs
             df_temp = df_simplified[df_simplified["route_num"]==i]
             d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
             f_point = [df_temp.iloc[-1]["lat"], df_temp.iloc[-1]["lon"]]
-            route = pathfind_route_osmnx(d_point, f_point, tree, G)
+            route = pathfind_route_osmnx(d_point, f_point, tree, G, nodes)
             route_coord = [[G.nodes[x]["y"], G.nodes[x]["x"]] for x in route]
             route_coord = [x + [i] for x in route_coord]
             df_pathfinding = df_pathfinding.append(pd.DataFrame(route_coord, columns=["lat", "lon", "route_num"]))
@@ -239,10 +239,9 @@ def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxs
 
 
 
-def pathfind_route_osmnx(d_point, f_point, tree, G):
+def pathfind_route_osmnx(d_point, f_point, tree, G, nodes):
     d_idx = tree.query([d_point], k=1, return_distance=False)[0]
     f_idx = tree.query([f_point], k=1, return_distance=False)[0]
-    nodes, _ = ox.graph_to_gdfs(G)
     closest_node_to_d = nodes.iloc[d_idx].index.values[0]
     closest_node_to_f = nodes.iloc[f_idx].index.values[0]
     route = nx.shortest_path(G, 
