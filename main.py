@@ -68,9 +68,7 @@ with open("./files/"+project_folder+"/data_processed/osmnx_pathfinding_simplifie
     df_pathfinding = pickle.load(infile)
 with open("./files/"+project_folder+"/clustering/dbscan_observations.tab",'rb') as infile:
     tab_clusters = pickle.load(infile)
-with open("./files/"+project_folder+"/clustering/dbscan_observations.dict",'rb') as infile:
-    dict_cluster = pickle.load(infile)
-dict_clusters = cl.tab_clusters_to_dict(tab_clusters)
+dict_cluster = cl.tab_clusters_to_dict(tab_clusters)
 with open("./files/"+project_folder+"/clustering/voxels_clustered_osmnx.dict",'rb') as infile:
     dict_voxels_clustered = pickle.load(infile)
 with open("./files/"+project_folder+"/neural_networks/saved/network.param",'rb') as infile:
