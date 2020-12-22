@@ -49,9 +49,9 @@ nodes_1, _ = ox.graph_to_gdfs(G_1)
 tree_1 = KDTree(nodes_1[['y', 'x']], metric='euclidean')
 
 if(project_folder == "veleval"):
-    with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
+    with open("files/"+project_folder+"/city_graphs/city_2.ox", "rb") as infile:
         G_2 = pickle.load(infile)
-    with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
+    with open("files/"+project_folder+"/city_graphs/city_2.ox", "rb") as infile:
         G_base_2 = pickle.load(infile)
     nodes_2, _ = ox.graph_to_gdfs(G_2)
     tree_2 = KDTree(nodes_2[['y', 'x']], metric='euclidean')

@@ -7,7 +7,7 @@ G_lyon = ox.graph_from_point(lyon, dist=10000)
 G_stetienne = ox.graph_from_point(st_etienne, dist=7500)
 G = G_lyon
 
-with open("files/veleval/city_graphs/city_1.ox", "wb") as outfile:
+with open("files/veleval/city_graphs/city.ox", "wb") as outfile:
     pickle.dump(G_lyon, outfile)
 with open("files/veleval/city_graphs/city_2.ox", "wb") as outfile:
     pickle.dump(G_stetienne, outfile)
