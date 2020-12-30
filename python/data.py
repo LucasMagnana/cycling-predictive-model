@@ -204,12 +204,12 @@ def pathfind_route_mapbox(d_point, f_point, df_pathfinding=pd.DataFrame(), num_r
     return None
 
 
-def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxsize):
+'''def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxsize):
     if(nb_routes > 0):
         with open(infile_str,'rb') as infile:
             df_simplified = pickle.load(infile)
 
-        with open(graphfile_str,'rb') as infile:
+        with open(graphfile_str+"/city.ox",'rb') as infile:
             G = pickle.load(infile)
             nodes, _ = ox.graph_to_gdfs(G)
             tree = KDTree(nodes[['y', 'x']], metric='euclidean')
@@ -233,6 +233,50 @@ def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxs
             route = pathfind_route_osmnx(d_point, f_point, tree, G, nodes)
             route_coord = [[G.nodes[x]["y"], G.nodes[x]["x"]] for x in route]
             route_coord = [x + [i] for x in route_coord]
+            df_pathfinding = df_pathfinding.append(pd.DataFrame(route_coord, columns=["lat", "lon", "route_num"]))
+            with open(outfile_str, 'wb') as outfile:
+                pickle.dump(df_pathfinding, outfile)'''
+
+
+def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxsize):
+    if(nb_routes > 0):
+        with open(infile_str,'rb') as infile:
+            df_simplified = pickle.load(infile)
+
+        with open(graphfile_str+"/city.ox",'rb') as infile:
+            G = pickle.load(infile)
+            nodes, _ = ox.graph_to_gdfs(G)
+            tree = KDTree(nodes[['y', 'x']], metric='euclidean')
+
+        with open(graphfile_str+"/city_2.ox",'rb') as infile:
+            G_1 = pickle.load(infile)
+            nodes_1, _ = ox.graph_to_gdfs(G_1)
+            tree_1 = KDTree(nodes_1[['y', 'x']], metric='euclidean')
+
+        check_file(outfile_str, pd.DataFrame(columns=['lat', 'lon', 'route_num']))
+        with open(outfile_str,'rb') as infile:
+            df_pathfinding = pickle.load(infile)
+
+        if(len(df_pathfinding) == 0):
+            last_route_pathfound = 0
+        else:
+            last_route_pathfound = df_pathfinding.iloc[-1]["route_num"]+1
+
+        nb_routes = min(df_simplified.iloc[-1]["route_num"] - last_route_pathfound, nb_routes)
+        print(last_route_pathfound, last_route_pathfound+nb_routes+1)
+        for i in range(last_route_pathfound, last_route_pathfound+nb_routes+1):
+            print(i)
+            df_temp = df_simplified[df_simplified["route_num"]==i]
+            d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
+            f_point = [df_temp.iloc[-1]["lat"], df_temp.iloc[-1]["lon"]]
+            if(d_point[0] > 45.5):
+                route = pathfind_route_osmnx(d_point, f_point, tree, G, nodes)
+                route_coord = [[G.nodes[x]["y"], G.nodes[x]["x"]] for x in route]
+                route_coord = [x + [i] for x in route_coord]
+            else:
+                route = pathfind_route_osmnx(d_point, f_point, tree_1, G_1, nodes_1)
+                route_coord = [[G_1.nodes[x]["y"], G_1.nodes[x]["x"]] for x in route]
+                route_coord = [x + [i] for x in route_coord]
             df_pathfinding = df_pathfinding.append(pd.DataFrame(route_coord, columns=["lat", "lon", "route_num"]))
             with open(outfile_str, 'wb') as outfile:
                 pickle.dump(df_pathfinding, outfile)

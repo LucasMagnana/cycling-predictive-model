@@ -86,6 +86,7 @@ network = RNN.RNN_LSTM(size_data, max(tab_clusters)+1, param.hidden_size, param.
 network.load_state_dict(torch.load("files/"+project_folder+"/neural_networks/saved/network_temp.pt"))
 network.eval()
 
+nb_good_predict = 0
 
 deviation = 0 #5e-3
 
@@ -97,7 +98,7 @@ tab_diff_coeff = []
 
 
 for i in tab_num_test: #len(tab_clusters)):
-    print(i)
+    #print(i)
     df_temp = df_pathfinding[df_pathfinding["route_num"]==i]
     d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
     f_point = [df_temp.iloc[-1]["lat"], df_temp.iloc[-1]["lon"]]
@@ -122,10 +123,11 @@ for i in tab_num_test: #len(tab_clusters)):
         G_base = G_base_1
 
     df_route, cl, nb_new_cluster = validation.find_cluster(d_point, f_point, network, param.voxels_frequency, df_pathfinding, dict_voxels_clustered, 
-                                kmeans, tree, G, nodes)
+                                kmeans, tree, G, nodes, df_temp)
     #print(cl, tab_clusters[i])
     if(cl == tab_clusters[i]):
-        print("good predict")
+        #print("good predict")
+        nb_good_predict += 1
         #dp.display_cluster_heatmap_mapbox(df_simplified, dict_cluster[cl])
     #dp.display_mapbox(df_route)
     #dp.display(df_temp)
@@ -162,7 +164,7 @@ for i in tab_num_test: #len(tab_clusters)):
             vertexes = key.split(";")
             v = int(vertexes[0])
             v_n = int(vertexes[1])
-            G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(dict_modif[cl][key]/1.6)
+            G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(dict_modif[cl][key]/1)
     else :
         print("start:", datetime.datetime.now().time())
         dict_modif[cl] = {}
@@ -223,15 +225,25 @@ for i in tab_num_test: #len(tab_clusters)):
 
     tab_diff_coeff.append((1-min(coeff_modified))-(1-min(coeff_simplified)))
 
-    print(tab_diff_coeff[-1])
+    #print(tab_diff_coeff[-1])
 
     #print(1-min(coeff_simplified) <= 1-min(coeff_modified))
 
     #print(1-min(coeff_simplified), 1-min(coeff_modified))
+
+print("Good predict:", nb_good_predict/len(tab_num_test)*100, "%")
+print("Mean shortest path similarity:", sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100, "%")
+print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
+print("Mean improvement:", sum(tab_diff_coeff)/len(tab_diff_coeff)*100, "%")
 
 plt.style.use('seaborn-whitegrid')
 fig = plt.figure(figsize=(25,15))
 ax = plt.axes()
 x = np.linspace(0, len(tab_diff_coeff), len(tab_diff_coeff))
 plt.plot(x, tab_diff_coeff, color='red', linewidth=3.5)
+plt.show()
+
+plt.plot(x, tab_coeff_simplified, color='red', linewidth=3.5, label='basic')
+plt.plot(x, tab_coeff_modified, color='blue', linewidth=3.5, label='modified')  
+plt.legend(loc='upper right')
 plt.show()
