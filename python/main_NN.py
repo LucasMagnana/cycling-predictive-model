@@ -50,8 +50,8 @@ def main(args):
         if(key != -1):
             tab_num_test += random.sample(dict_clusters[key], round(args.percentage_test/100*len(dict_clusters[key])))
             
-    '''with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
-        tab_num_test = pickle.load(infile)'''
+    with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
+        tab_num_test = pickle.load(infile)
     
     print(len(tab_num_test))
     tab_num_train = list(range(len(tab_routes_voxels)))
