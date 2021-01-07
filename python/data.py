@@ -85,6 +85,7 @@ def simplify_gps(infile, outfile, nb_routes=sys.maxsize, dim=2):
         else:
             last_route_simplified = df_simplified.iloc[-1]["route_num"]+1
         nb_routes = min(df.iloc[-1]["route_num"] - last_route_simplified, nb_routes)
+        print(last_route_simplified, last_route_simplified+nb_routes+1)
         df_simplified = df_simplified.append(rd_compression(df, last_route_simplified, last_route_simplified+nb_routes+1, dim))
         with open(outfile, 'wb') as outfile:
             pickle.dump(df_simplified, outfile)
@@ -107,8 +108,6 @@ def rd_compression(df, start, end, dim=2, eps=1e-4):
     pandas' DataFrame with columns=['lat', 'lon', 'route_num']
         the compressed DataFrame
     """
-    
-    print(start, end)
     df_simplified = pd.DataFrame()
     for i in range(start, end):
         route = df[df['route_num']==i].values

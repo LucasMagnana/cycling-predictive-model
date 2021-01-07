@@ -58,7 +58,7 @@ if(project_folder == "veleval"):
     tree_2 = KDTree(nodes_2[['y', 'x']], metric='euclidean')
 
 
-print(len(G_1), len(G_2))
+#print(len(G_1), len(G_2))
 
 data.check_file("files/"+project_folder+"/city_graphs/graph_modifications.dict", {})
 with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'rb') as infile:
@@ -88,17 +88,23 @@ network.eval()
 
 nb_good_predict = 0
 
-deviation = 0 #5e-3
+deviation = 0 #5e-2
+coeff_diminution = 1
 
-tab_coeff_simplified = []
-tab_coeff_modified = []
+tab_coeff_simplified = [[], []]
+tab_coeff_modified = [[], []]
 
-tab_diff_coeff = []
-#________________________________________________________________________
+tab_diff_coeff = [[], []]
 
+
+tab_coeff_simplified = [[], []]
+tab_coeff_modified = [[], []]
+
+tab_diff_coeff = [[], []]
 
 for i in tab_num_test: #len(tab_clusters)):
     #print(i)
+    good_predict = False
     df_temp = df_pathfinding[df_pathfinding["route_num"]==i]
     d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
     f_point = [df_temp.iloc[-1]["lat"], df_temp.iloc[-1]["lon"]]
@@ -128,6 +134,7 @@ for i in tab_num_test: #len(tab_clusters)):
     if(cl == tab_clusters[i]):
         #print("good predict")
         nb_good_predict += 1
+        good_predict = True
         #dp.display_cluster_heatmap_mapbox(df_simplified, dict_cluster[cl])
     #dp.display_mapbox(df_route)
     #dp.display(df_temp)
@@ -164,7 +171,7 @@ for i in tab_num_test: #len(tab_clusters)):
             vertexes = key.split(";")
             v = int(vertexes[0])
             v_n = int(vertexes[1])
-            G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(dict_modif[cl][key]/1)
+            G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(dict_modif[cl][key]/coeff_diminution)
     else :
         print("start:", datetime.datetime.now().time())
         dict_modif[cl] = {}
@@ -182,7 +189,7 @@ for i in tab_num_test: #len(tab_clusters)):
                     tot_coeff /= nb_vox_found
                     dict_modif[cl][str(v)+";"+str(v_n)] = tot_coeff
                     #print(dict_modif[cl][str(v)+";"+str(v_n)], G[v][v_n][0]['length'], G[v][v_n][0]['length']*(tot_coeff/1.6))
-                    G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(tot_coeff/1.6)
+                    G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(tot_coeff/coeff_diminution)
         print("end:", datetime.datetime.now().time())
         with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'wb') as outfile:
             pickle.dump(dict_modif, outfile)
@@ -220,10 +227,14 @@ for i in tab_num_test: #len(tab_clusters)):
     coeff_modified = metric.get_distance_voxels(0, 1, tab_voxels_global)
     
 
-    tab_coeff_simplified.append(1-min(coeff_simplified))
-    tab_coeff_modified.append(1-min(coeff_modified))
-
-    tab_diff_coeff.append((1-min(coeff_modified))-(1-min(coeff_simplified)))
+    if(good_predict):
+        tab_coeff_simplified[0].append(1-min(coeff_simplified))
+        tab_coeff_modified[0].append(1-min(coeff_modified))
+        tab_diff_coeff[0].append((1-min(coeff_modified))-(1-min(coeff_simplified)))
+    else:
+        tab_coeff_simplified[1].append(1-min(coeff_simplified))
+        tab_coeff_modified[1].append(1-min(coeff_modified))
+        tab_diff_coeff[1].append((1-min(coeff_modified))-(1-min(coeff_simplified)))
 
     #print(tab_diff_coeff[-1])
 
@@ -231,12 +242,30 @@ for i in tab_num_test: #len(tab_clusters)):
 
     #print(1-min(coeff_simplified), 1-min(coeff_modified))
 
-print("Good predict:", nb_good_predict/len(tab_num_test)*100, "%")
-print("Mean shortest path similarity:", sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100, "%")
-print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
-print("Mean improvement:", sum(tab_diff_coeff)/len(tab_diff_coeff)*100, "%")
 
-plt.style.use('seaborn-whitegrid')
+
+print("===============================")
+print("GOOD PREDICTIONS :")
+print("===============================")
+print("Mean shortest path similarity:", sum(tab_coeff_simplified[0])/len(tab_coeff_simplified[0])*100, "%")
+print("Mean modified path similarity:", sum(tab_coeff_modified[0])/len(tab_coeff_modified[0])*100, "%")
+print("Mean improvement:", sum(tab_diff_coeff[0])/len(tab_diff_coeff[0])*100, "%")
+print("===============================")
+print("BAD PREDICTIONS :")
+print("===============================")
+print("Mean shortest path similarity:", sum(tab_coeff_simplified[1])/len(tab_coeff_simplified[1])*100, "%")
+print("Mean modified path similarity:", sum(tab_coeff_modified[1])/len(tab_coeff_modified[1])*100, "%")
+print("Mean improvement:", sum(tab_diff_coeff[1])/len(tab_diff_coeff[1])*100, "%")
+print("===============================")
+print("TOTAL :")
+print("===============================")
+print("Good predict:", nb_good_predict/len(tab_num_test)*100, "%")
+print("Mean shortest path similarity:", sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100, "%")
+print("Mean modified path similarity:", sum(sum(tab_coeff_modified,[]))/sum(len(row) for row in tab_coeff_modified)*100, "%")
+print("Mean improvement:", sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100, "%")
+
+
+'''plt.style.use('seaborn-whitegrid')
 fig = plt.figure(figsize=(25,15))
 ax = plt.axes()
 x = np.linspace(0, len(tab_diff_coeff), len(tab_diff_coeff))
@@ -246,4 +275,4 @@ plt.show()
 plt.plot(x, tab_coeff_simplified, color='red', linewidth=3.5, label='basic')
 plt.plot(x, tab_coeff_modified, color='blue', linewidth=3.5, label='modified')  
 plt.legend(loc='upper right')
-plt.show()
+plt.show()'''

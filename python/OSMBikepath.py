@@ -8,7 +8,7 @@ from OSMPythonTools.nominatim import Nominatim
 
 from collections import OrderedDict
 
-project_folder = "monresovelo"
+project_folder = "veleval"
 
 overpass = Overpass()
 nominatim = Nominatim()
@@ -24,7 +24,7 @@ dimensions = OrderedDict([
 ])
 
 def fetch(typeOfRoad):
-    areaId = nominatim.query("Montreal").areaId()
+    areaId = nominatim.query("Lyon").areaId()
     query = overpassQueryBuilder(area=areaId, elementType='way', selector=typeOfRoad, out='body', includeGeometry=True)
     return overpass.query(query)
 data = Data(fetch, dimensions)
