@@ -8,20 +8,9 @@ import python.voxels as voxels
 import python.data as data
 
 
-def find_cluster(d_point, f_point, network, voxels_frequency, df, dict_voxels, clustering, tree, G, nodes, df_temp):
+def find_cluster(route, network, voxels_frequency, dict_voxels, clustering, df_temp):
 
     nb_new_cluster = 0
-
-    route = data.pathfind_route_osmnx(d_point, f_point, tree, G, nodes)
-    route_coord = [[G.nodes[x]["y"], G.nodes[x]["x"]] for x in route]
-    route_coord = [x + [0] for x in route_coord]
-
-    df_route = pd.DataFrame(route_coord, columns=["lat", "lon", "route_num"])
-    df_route = data.rd_compression(df_route, 0, 1)
-    '''df_route = df_temp
-    df_route["route_num"]=0'''
-    tab_routes_voxels, _, _ = voxels.generate_voxels(df_route, 0, 0)
-    route = tab_routes_voxels[0]
 
     tab_voxels_int = []
     nb_vox = 0
@@ -46,5 +35,5 @@ def find_cluster(d_point, f_point, network, voxels_frequency, df, dict_voxels, c
     output = network(tens_route)
     pred = output.argmax(dim=1, keepdim=True)
     
-    return df_route, pred.item(), nb_new_cluster
+    return pred.item(), nb_new_cluster
     
