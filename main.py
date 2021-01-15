@@ -16,6 +16,7 @@ import osmnx as ox
 import networkx as nx
 from sklearn.neighbors import KDTree
 import matplotlib.pyplot as plt
+import os
 
 import datetime
 
@@ -30,10 +31,46 @@ import python.validation as validation
 #from python.NN import *
 
 
+def create_dict_modif(G, dict_cluster, df_simplified):
+    dict_modif = {}
+    print("start:", datetime.datetime.now().time())
+    dict_dict_voxels_cluster = {}
+    for cl in dict_cluster:
+        if(cl > -1):
+            df_cluster = pd.DataFrame(columns=["lat", "lon", "route_num"])
+            for num_route in range(len(dict_cluster[cl])):
+                df_temp = df_simplified[df_simplified["route_num"]==dict_cluster[cl][num_route]]
+                df_temp["route_num"] = num_route
+                df_cluster = df_cluster.append(df_temp)
+            _, dict_voxels_cluster_global, dict_voxels_cluster = voxel.generate_voxels(df_cluster, df_cluster.iloc[0]["route_num"], df_cluster.iloc[-1]["route_num"])
+            dict_dict_voxels_cluster[cl] = dict_voxels_cluster
+    for v in G:
+        for v_n in G[v]:
+            df_line = pd.DataFrame([[G.nodes[v]['y'], G.nodes[v]['x'], 0], [G.nodes[v_n]['y'], G.nodes[v_n]['x'], 0]], columns=["lat", "lon", "route_num"])
+            tab_voxels, _, _ = voxel.generate_voxels(df_line, 0, 0)
+            for cl in dict_dict_voxels_cluster:
+                nb_vox_found = 0
+                tot_coeff = 0
+                dict_voxels_cluster = dict_dict_voxels_cluster[cl]
+                for vox in tab_voxels[0]:
+                    if vox in dict_voxels_cluster:
+                        nb_vox_found += 1
+                        tot_coeff += dict_voxels_cluster[vox]["cyclability_coeff"]
+                if(nb_vox_found > 0):
+                    if(cl not in dict_modif):
+                        dict_modif[cl] = {}
+                    tot_coeff /= nb_vox_found
+                    dict_modif[cl][str(v)+";"+str(v_n)] = tot_coeff
+    print("end:", datetime.datetime.now().time())
+    return dict_modif
+
+
 pd.options.mode.chained_assignment = None
 
 project_folder = "veleval"
 
+with open("files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
+    df_pathfinding = pickle.load(infile)
 
 with open("files/"+project_folder+"/data_processed/observations_matched_simplified.df",'rb') as infile:
     df_simplified = pickle.load(infile)
@@ -55,16 +92,7 @@ nodes_2, _ = ox.graph_to_gdfs(G_2)
 tree_2 = KDTree(nodes_2[['y', 'x']], metric='euclidean')
 
 
-#print(len(G_1), len(G_2))
-
-data.check_file("files/"+project_folder+"/city_graphs/graph_modifications.dict", {})
-with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'rb') as infile:
-    dict_modif = pickle.load(infile)
-
-data.check_file("files/"+project_folder+"/city_graphs/graph_modifications_global.dict", {})
-with open("files/"+project_folder+"/city_graphs/graph_modifications_global.dict",'rb') as infile:
-    dict_modif_global = pickle.load(infile)
-
+print(len(G_1), len(G_2))
 
 with open("./files/"+project_folder+"/clustering/voxels_clustered_osmnx.dict",'rb') as infile:
     dict_voxels_clustered = pickle.load(infile)
@@ -79,6 +107,41 @@ for key in dict_cluster:
     for nr in dict_cluster[key]:
         if nr in tab_num_test:
             dict_cluster[key].remove(nr)
+            
+ 
+
+if(not(os.path.isfile("files/"+project_folder+"/city_graphs/graph_modifications.dict"))):
+    dict_modif = create_dict_modif(G_1, dict_cluster, df_simplified)
+    dict_modif_se = create_dict_modif(G_2, dict_cluster, df_simplified)
+    print(len(dict_modif), len(dict_modif_se))
+    for cl in dict_modif_se:
+        if(cl not in dict_modif):
+            dict_modif[cl] = dict_modif_se[cl]
+            
+    print(len(dict_modif))
+        
+    with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'wb') as outfile:
+        pickle.dump(dict_modif, outfile)
+   
+            
+if(not(os.path.isfile("files/"+project_folder+"/city_graphs/graph_modifications_global.dict"))):    
+    dict_modif_global = {}
+        
+    dict_cluster_global = {0: range(len(tab_clusters)+1)}
+    dict_modif_global[0] = create_dict_modif(G_1, dict_cluster_global, df_simplified)[0]
+    print(len(dict_modif_global[0]))
+    dict_modif_global[1] = create_dict_modif(G_2, dict_cluster_global, df_simplified)[0]
+    print(len(dict_modif_global[1]))
+    with open("files/"+project_folder+"/city_graphs/graph_modifications_global.dict",'wb') as outfile:
+        pickle.dump(dict_modif_global, outfile)
+    
+    
+
+with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'rb') as infile:
+    dict_modif = pickle.load(infile)
+
+with open("files/"+project_folder+"/city_graphs/graph_modifications_global.dict",'rb') as infile:
+    dict_modif_global = pickle.load(infile)
 
             
 
@@ -91,10 +154,11 @@ def create_path_compute_similarity(d_point, f_point, df, tree, G, nodes, global_
 
     df_route = pd.DataFrame(route_coord, columns=["lat", "lon", "route_num"])
     df_route = data.rd_compression(df_route, 0, 1)
+   
 
     tab_route_voxels, _, _ = voxel.generate_voxels(df_route, 0, 0)
     df["route_num"] = 1
-    df["type"] = 0
+    df["type"] = 0     
     df_route["type"] = 2
     df_coeff = df_route.append(df)
 
@@ -114,40 +178,15 @@ def create_path_compute_similarity(d_point, f_point, df, tree, G, nodes, global_
     return df_route, tab_route_voxels[0], coeff
 
 
-def modify_network_graph(cl, dict_modif, G, dict_cluster, df_simplified, coeff_diminution = 1):
+def modify_network_graph(cl, dict_modif, G, coeff_diminution = 1):
     if(cl in dict_modif):
         for key in dict_modif[cl]:
             vertexes = key.split(";")
             v = int(vertexes[0])
-            v_n = int(vertexes[1])
+            v_n = int(vertexes[1])  
             G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(dict_modif[cl][key]/coeff_diminution)
     else :
-        df_cluster = pd.DataFrame(columns=["lat", "lon", "route_num"])
-        for num_route in range(len(dict_cluster[cl])):
-            df_temp = df_simplified[df_simplified["route_num"]==dict_cluster[cl][num_route]]
-            df_temp["route_num"] = num_route
-            df_cluster = df_cluster.append(df_temp)
-        _, _, dict_voxels_cluster = voxel.generate_voxels(df_cluster, df_cluster.iloc[0]["route_num"], df_cluster.iloc[-1]["route_num"])
-        print("start:", datetime.datetime.now().time())
-        dict_modif[cl] = {}
-        for v in G:
-            for v_n in G[v]:
-                df_line = pd.DataFrame([[G.nodes[v]['y'], G.nodes[v]['x'], 0], [G.nodes[v_n]['y'], G.nodes[v_n]['x'], 0]], columns=["lat", "lon", "route_num"])
-                tab_voxels, _, _ = voxel.generate_voxels(df_line, 0, 0)
-                nb_vox_found = 0
-                tot_coeff = 0
-                for vox in tab_voxels[0]:
-                    if vox in dict_voxels_cluster:
-                        nb_vox_found += 1
-                        tot_coeff += dict_voxels_cluster[vox]["cyclability_coeff"]
-                if(nb_vox_found > 0):
-                    tot_coeff /= nb_vox_found
-                    dict_modif[cl][str(v)+";"+str(v_n)] = tot_coeff
-                    #print(dict_modif[cl][str(v)+";"+str(v_n)], G[v][v_n][0]['length'], G[v][v_n][0]['length']*(tot_coeff/1.6))
-                    G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(tot_coeff/coeff_diminution)
-        print("end:", datetime.datetime.now().time())
-        with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'wb') as outfile:
-            pickle.dump(dict_modif, outfile)
+        print("dict_modif not complete")
 
 
 
@@ -179,12 +218,6 @@ def main_global(global_metric):
 
     global tab_clusters
 
-    nodes_base_1, _ = ox.graph_to_gdfs(G_base_1)
-    tree_base_1 = KDTree(nodes_base_1[['y', 'x']], metric='euclidean')
-
-    nodes_base_2, _ = ox.graph_to_gdfs(G_base_2)
-    tree_base_2 = KDTree(nodes_base_2[['y', 'x']], metric='euclidean')
-
     deviation = 0 #5e-2
 
     tab_coeff_simplified = []
@@ -192,17 +225,12 @@ def main_global(global_metric):
 
     tab_diff_coeff = []
 
-    dict_cluster = {0: range(len(tab_clusters)+1), 1: range(len(tab_clusters)+1)}
 
 
-    save_dict_modif = modify_network_graph(0, dict_modif_global, G_1, dict_cluster, df_simplified)
-    save_dict_modif = modify_network_graph(1, dict_modif_global, G_2, dict_cluster, df_simplified)
-
-    if(save_dict_modif):
-        with open("files/"+project_folder+"/city_graphs/graph_modifications_global.dict",'wb') as outfile:
-            pickle.dump(dict_modif_global, outfile)
+    modify_network_graph(0, dict_modif_global, G_1)
+    modify_network_graph(1, dict_modif_global, G_2)
     
-    for i in tab_num_test: #len(tab_clusters)):e
+    for i in tab_num_test:
         df_route_tested = df_simplified[df_simplified["route_num"]==i]
 
         d_point = [df_route_tested.iloc[0]["lat"], df_route_tested.iloc[0]["lon"]]
@@ -291,7 +319,7 @@ def main_clusters(global_metric):
             nodes_base = nodes_base_1
             tree_base = tree_base_1
         if(key != -1):
-            modify_network_graph(key, dict_modif, G, dict_cluster, df_simplified)
+            modify_network_graph(key, dict_modif, G)
     
     for i in tab_num_test: #len(tab_clusters)):e
         df_route_tested = df_simplified[df_simplified["route_num"]==i]
@@ -418,7 +446,7 @@ def main_clusters_NN(global_metric):
         ################################################################################_
         df_route = df_route[["lat", "lon", "route_num"]]
 
-        modify_network_graph(cl, dict_modif, G, dict_cluster, df_simplified)
+        modify_network_graph(cl, dict_modif, G)
 
 
         df_route_modified,_,coeff_modified = create_path_compute_similarity(d_point, f_point, df_simplified[df_simplified["route_num"]==i], tree, G, nodes, global_metric)
@@ -443,7 +471,7 @@ def main_clusters_NN(global_metric):
 
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
 
-global_metric = True
+global_metric = False
 
 tab_results_base = []
 tab_results_improvement = []
@@ -475,7 +503,7 @@ tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_NN(glob
 tab_results_base.append(sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100)
 
-print("===============================")
+'''print("===============================")
 print("GOOD PREDICTIONS :")
 print("===============================")
 print("Mean shortest path similarity:", sum(tab_coeff_simplified[0])/len(tab_coeff_simplified[0])*100, "%")
@@ -487,7 +515,7 @@ print("===============================")
 print("Mean shortest path similarity:", sum(tab_coeff_simplified[1])/len(tab_coeff_simplified[1])*100, "%")
 print("Mean modified path similarity:", sum(tab_coeff_modified[1])/len(tab_coeff_modified[1])*100, "%")
 print("Mean improvement:", sum(tab_diff_coeff[1])/len(tab_diff_coeff[1])*100, "%")
-print("===============================")
+print("===============================")'''
 print("TOTAL (Good predict:", len(tab_coeff_simplified[0])/(len(tab_coeff_simplified[0])+len(tab_coeff_simplified[1]))*100, "%):")
 print("===============================")
 print("Mean shortest path similarity:", sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100, "%")

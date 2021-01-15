@@ -267,6 +267,8 @@ def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxs
             print(i)
             df_temp = df_simplified[df_simplified["route_num"]==i]
             d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
+            if(i==675):
+                d_point = [df_temp.iloc[1]["lat"], df_temp.iloc[1]["lon"]]
             f_point = [df_temp.iloc[-1]["lat"], df_temp.iloc[-1]["lon"]]
             if(d_point[0] > 45.5):
                 route = pathfind_route_osmnx(d_point, f_point, tree, G, nodes)
