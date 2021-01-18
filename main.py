@@ -471,7 +471,7 @@ def main_clusters_NN(global_metric):
 
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
 
-global_metric = False
+global_metric = True
 
 tab_results_base = []
 tab_results_improvement = []
