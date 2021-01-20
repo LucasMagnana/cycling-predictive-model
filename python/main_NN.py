@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import argparse
 import random
+import os
 
 from NN import *
 from RNN import *
@@ -17,7 +18,7 @@ import clustering as cl
 
 def main(args):
     
-    project_folder = "veleval"
+    project_folder = args.project_folder
 
     #  gpx_pathfindind_cycling
     with open(args.path+"files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
@@ -49,9 +50,10 @@ def main(args):
     for key in dict_clusters:
         if(key != -1):
             tab_num_test += random.sample(dict_clusters[key], round(args.percentage_test/100*len(dict_clusters[key])))
-            
-    with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
-        tab_num_test = pickle.load(infile)
+    
+    if(not(os.path.isfile(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab")) and False):
+        with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
+            tab_num_test = pickle.load(infile)
     
     print(len(tab_num_test))
     tab_num_train = list(range(len(tab_routes_voxels)))
@@ -168,5 +170,6 @@ if __name__ == "__main__":
     parse.add_argument('--percentage-test', type=int, default=0, help='percentage of data to use as testing')
     parse.add_argument('--bidirectional', type=bool, default=False, help='change the LSTM in a bidirectional one')
     parse.add_argument('--dropout', type=float, default=0, help='set the dropout layers parameter')
+    parse.add_argument('--project-folder', type=str, default="veleval", help='folder of the project')
     
     main(parse.parse_args())
