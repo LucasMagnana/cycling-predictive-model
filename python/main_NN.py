@@ -55,13 +55,12 @@ def main(args):
         with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
             tab_num_test = pickle.load(infile)
     
-    print(len(tab_num_test))
     tab_num_train = list(range(len(tab_routes_voxels)))
     tab_num_noise = [i for i, e in enumerate(tab_clusters) if e == -1]
     tab_num_train = [x for x in tab_num_train if x not in tab_num_test]
     tab_num_train = [x for x in tab_num_train if x not in tab_num_noise]
           
-
+    print(len(tab_num_test), len(tab_num_noise), len(tab_num_train))
     for i in range(len(tab_routes_voxels)):
         nb_vox = 0
         tab_routes_voxels_int.append([])

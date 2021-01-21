@@ -237,7 +237,7 @@ def pathfind_route_mapbox(d_point, f_point, df_pathfinding=pd.DataFrame(), num_r
                 pickle.dump(df_pathfinding, outfile)'''
 
 
-def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxsize):
+def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, unreachableroutesfile_str, nb_routes=sys.maxsize):
     if(nb_routes > 0):
         with open(infile_str,'rb') as infile:
             df_simplified = pickle.load(infile)
@@ -255,6 +255,10 @@ def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxs
         check_file(outfile_str, pd.DataFrame(columns=['lat', 'lon', 'route_num']))
         with open(outfile_str,'rb') as infile:
             df_pathfinding = pickle.load(infile)
+            
+        check_file(unreachableroutesfile_str, [[],[]])
+        with open(unreachableroutesfile_str,'rb') as infile:
+            tab_unreachable_routes = pickle.load(infile)
 
         if(len(df_pathfinding) == 0):
             last_route_pathfound = 0
@@ -267,10 +271,12 @@ def pathfinding_osmnx(infile_str, outfile_str, graphfile_str, nb_routes=sys.maxs
             print(i)
             df_temp = df_simplified[df_simplified["route_num"]==i]
             d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
-            if(i==675 or i==933 or i==1028 or i==1327 or i==1818 or i==1846 or i==2097 or i==2483 or i==2896 or i==3545):
+            if(i in tab_unreachable_routes[0]):
+                print("chatte")
                 d_point = [df_temp.iloc[1]["lat"], df_temp.iloc[1]["lon"]]
             f_point = [df_temp.iloc[-1]["lat"], df_temp.iloc[-1]["lon"]]
-            if(i==2631 or i==3261):
+            if(i in tab_unreachable_routes[1]):
+                print("bite")
                 f_point = [df_temp.iloc[-2]["lat"], df_temp.iloc[-2]["lon"]]
             if(d_point[0] > 45.5):
                 route = pathfind_route_osmnx(d_point, f_point, tree, G, nodes)
@@ -324,10 +330,8 @@ def distance_between_points(p1, p2):
 def compute_distance(infile, outfile):
     with open(infile,'rb') as infile:
         df = pickle.load(infile)
-    check_file(outfile, [])
-    with open(outfile,'rb') as infile:
-        tab_distances = pickle.load(infile)
-    for i in range(len(tab_distances), df.iloc[-1]["route_num"]+1):
+    tab_distances = []
+    for i in range(df.iloc[-1]["route_num"]+1):
         df_temp = df[df["route_num"]==i]
         dist = 0
         if(df_temp.shape[0] >= 2):

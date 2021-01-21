@@ -67,7 +67,7 @@ def create_dict_modif(G, dict_cluster, df_simplified):
 
 pd.options.mode.chained_assignment = None
 
-project_folder = "veleval"
+project_folder = "veleval_full"
 
 with open("files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
     df_pathfinding = pickle.load(infile)
@@ -83,7 +83,7 @@ nodes_1, _ = ox.graph_to_gdfs(G_1)
 tree_1 = KDTree(nodes_1[['y', 'x']], metric='euclidean')
 
 
-if(project_folder == "veleval"):
+if("veleval" in project_folder):
     with open("files/"+project_folder+"/city_graphs/city_2.ox", "rb") as infile:
         G_2 = pickle.load(infile)
     with open("files/"+project_folder+"/city_graphs/city_2.ox", "rb") as infile:
@@ -107,6 +107,11 @@ for key in dict_cluster:
     for nr in dict_cluster[key]:
         if nr in tab_num_test:
             dict_cluster[key].remove(nr)
+ 
+
+data.check_file("files/"+project_folder+"/data_processed/unreachable_routes.tab", [[],[]])
+with open("files/"+project_folder+"/data_processed/unreachable_routes.tab",'rb') as infile:
+    tab_unreachable_routes = pickle.load(infile)
             
  
 
@@ -179,14 +184,15 @@ def create_path_compute_similarity(d_point, f_point, df, tree, G, nodes, global_
 
 
 def modify_network_graph(cl, dict_modif, G, coeff_diminution = 1):
-    if(cl in dict_modif):
-        for key in dict_modif[cl]:
-            vertexes = key.split(";")
-            v = int(vertexes[0])
-            v_n = int(vertexes[1])  
+    for key in dict_modif[cl]:
+        vertexes = key.split(";")
+        v = int(vertexes[0])
+        v_n = int(vertexes[1]) 
+        if(v in G):
             G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(dict_modif[cl][key]/coeff_diminution)
-    else :
-        print("dict_modif not complete")
+        else: 
+            return False
+    return True
 
 
 
@@ -195,7 +201,29 @@ def cancel_network_graph_modifications(cl, dict_modif, G, G_base):
         vertexes = key.split(";")
         v = int(vertexes[0])
         v_n = int(vertexes[1])
-        G[v][v_n][0]['length'] = G_base[v][v_n][0]['length']
+        if(v in G):
+            G[v][v_n][0]['length'] = G_base[v][v_n][0]['length']
+        else:
+            break
+        
+def choose_route_endpoints(df_route, num_route, deviation):
+        global tab_unreachable_routes
+        d_point = [df_route.iloc[0]["lat"], df_route.iloc[0]["lon"]]
+        if(num_route in tab_unreachable_routes[0]):
+            d_point = [df_route.iloc[1]["lat"], df_route.iloc[1]["lon"]]
+        f_point = [df_route.iloc[-1]["lat"], df_route.iloc[-1]["lon"]]
+        if(num_route in tab_unreachable_routes[1]):
+            f_point = [df_route.iloc[-2]["lat"], df_route.iloc[-2]["lon"]]
+        rand = random.uniform(-deviation, deviation)
+        d_point[0] += rand
+        rand = random.uniform(-deviation, deviation)
+        d_point[1] += rand
+        rand = random.uniform(-deviation, deviation)
+        f_point[0] += rand
+        rand = random.uniform(-deviation, deviation)
+        f_point[1] += rand
+        
+        return d_point, f_point
 
 
 def main_global(global_metric):
@@ -233,18 +261,9 @@ def main_global(global_metric):
     for i in tab_num_test:
         df_route_tested = df_simplified[df_simplified["route_num"]==i]
 
-        d_point = [df_route_tested.iloc[0]["lat"], df_route_tested.iloc[0]["lon"]]
-        f_point = [df_route_tested.iloc[-1]["lat"], df_route_tested.iloc[-1]["lon"]]
-        rand = random.uniform(-deviation, deviation)
-        d_point[0] += rand
-        rand = random.uniform(-deviation, deviation)
-        d_point[1] += rand
-        rand = random.uniform(-deviation, deviation)
-        f_point[0] += rand
-        rand = random.uniform(-deviation, deviation)
-        f_point[1] += rand
+        d_point, f_point = choose_route_endpoints(df_route_tested, i, deviation)
 
-        if(project_folder == "veleval" and df_route_tested.iloc[0]["lat"] <= 45.5):
+        if("veleval" in project_folder and df_route_tested.iloc[0]["lat"] <= 45.5):
             G = G_2
             nodes = nodes_2
             tree = tree_2
@@ -304,7 +323,7 @@ def main_clusters(global_metric):
     for key in dict_cluster:
 
         df_temp = df_simplified[df_simplified["route_num"]==dict_cluster[key][0]]
-        if(project_folder == "veleval" and df_temp.iloc[0]["lat"] <= 45.5):
+        if("veleval" in project_folder and df_temp.iloc[0]["lat"] <= 45.5):
             G = G_2
             nodes = nodes_2
             tree = tree_2
@@ -323,19 +342,10 @@ def main_clusters(global_metric):
     
     for i in tab_num_test: #len(tab_clusters)):e
         df_route_tested = df_simplified[df_simplified["route_num"]==i]
+        
+        d_point, f_point = choose_route_endpoints(df_route_tested, i, deviation)
 
-        d_point = [df_route_tested.iloc[0]["lat"], df_route_tested.iloc[0]["lon"]]
-        f_point = [df_route_tested.iloc[-1]["lat"], df_route_tested.iloc[-1]["lon"]]
-        rand = random.uniform(-deviation, deviation)
-        d_point[0] += rand
-        rand = random.uniform(-deviation, deviation)
-        d_point[1] += rand
-        rand = random.uniform(-deviation, deviation)
-        f_point[0] += rand
-        rand = random.uniform(-deviation, deviation)
-        f_point[1] += rand
-
-        if(project_folder == "veleval" and df_route_tested.iloc[0]["lat"] <= 45.5):
+        if("veleval" in project_folder and df_route_tested.iloc[0]["lat"] <= 45.5):
             G = G_2
             nodes = nodes_2
             tree = tree_2
@@ -403,22 +413,12 @@ def main_clusters_NN(global_metric):
     tab_diff_coeff = [[], []]
 
     for i in tab_num_test: #len(tab_clusters)):
-        #print(i)
         good_predict = False
         df_route_tested = df_simplified[df_simplified["route_num"]==i]
+        
+        d_point, f_point = choose_route_endpoints(df_route_tested, i, deviation)
 
-        d_point = [df_route_tested.iloc[0]["lat"], df_route_tested.iloc[0]["lon"]]
-        f_point = [df_route_tested.iloc[-1]["lat"], df_route_tested.iloc[-1]["lon"]]
-        rand = random.uniform(-deviation, deviation)
-        d_point[0] += rand
-        rand = random.uniform(-deviation, deviation)
-        d_point[1] += rand
-        rand = random.uniform(-deviation, deviation)
-        f_point[0] += rand
-        rand = random.uniform(-deviation, deviation)
-        f_point[1] += rand
-
-        if(project_folder == "veleval" and df_route_tested.iloc[0]["lat"] <= 45.5):
+        if("veleval" in project_folder and df_route_tested.iloc[0]["lat"] <= 45.5):
             G = G_2
             nodes = nodes_2
             tree = tree_2
@@ -471,7 +471,7 @@ def main_clusters_NN(global_metric):
 
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
 
-global_metric = True
+global_metric = False
 
 tab_results_base = []
 tab_results_improvement = []
@@ -503,7 +503,7 @@ tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_NN(glob
 tab_results_base.append(sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100)
 
-'''print("===============================")
+print("===============================")
 print("GOOD PREDICTIONS :")
 print("===============================")
 print("Mean shortest path similarity:", sum(tab_coeff_simplified[0])/len(tab_coeff_simplified[0])*100, "%")
@@ -515,7 +515,7 @@ print("===============================")
 print("Mean shortest path similarity:", sum(tab_coeff_simplified[1])/len(tab_coeff_simplified[1])*100, "%")
 print("Mean modified path similarity:", sum(tab_coeff_modified[1])/len(tab_coeff_modified[1])*100, "%")
 print("Mean improvement:", sum(tab_diff_coeff[1])/len(tab_diff_coeff[1])*100, "%")
-print("===============================")'''
+print("===============================")
 print("TOTAL (Good predict:", len(tab_coeff_simplified[0])/(len(tab_coeff_simplified[0])+len(tab_coeff_simplified[1]))*100, "%):")
 print("===============================")
 print("Mean shortest path similarity:", sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100, "%")
