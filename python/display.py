@@ -36,7 +36,7 @@ def display_mapbox(dfdisplay, n=75, line_group="route_num", color=None, filename
 
 
 
-def display(df_display, line_group="route_num", color=None):
+def display(df_display, zoom=11, line_group="route_num", color=None):
     """
     Display a dataframe of gps points on a mapbox map.
     Parameters
@@ -50,7 +50,7 @@ def display(df_display, line_group="route_num", color=None):
     color : str, optional
         Dataframe's attribute used to color routes
     """
-    base_map = folium.Map(location=[df_display.iloc[0]["lat"],df_display.iloc[0]["lon"]], control_scale=True, zoom_start=11)
+    base_map = folium.Map(location=[df_display.iloc[0]["lat"],df_display.iloc[0]["lon"]], control_scale=True, zoom_start=zoom)
     tab_colors = ["blue", "red", "green"]
     i = 0
     cont = True

@@ -51,7 +51,7 @@ def main(args):
         if(key != -1):
             tab_num_test += random.sample(dict_clusters[key], round(args.percentage_test/100*len(dict_clusters[key])))
     
-    if(not(os.path.isfile(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab")) and False):
+    if(os.path.isfile(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab") and True):
         with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
             tab_num_test = pickle.load(infile)
     
@@ -119,7 +119,7 @@ def main(args):
     
     plt.plot(tab_loss[0], label='train')
     plt.plot(tab_loss[1], label='test')
-    plt.ylabel('Error')
+    plt.ylabel('Loss')
     plt.legend(loc='upper left')
     plt.show()
     
