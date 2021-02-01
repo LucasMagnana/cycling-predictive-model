@@ -67,7 +67,7 @@ def create_dict_modif(G, dict_cluster, df_simplified):
 
 pd.options.mode.chained_assignment = None
 
-project_folder = "veleval_full"
+project_folder = "veleval"
 
 with open("files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
     df_pathfinding = pickle.load(infile)
@@ -471,7 +471,7 @@ def main_clusters_NN(global_metric):
 
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
 
-global_metric = False
+global_metric = True
 
 tab_results_base = []
 tab_results_improvement = []

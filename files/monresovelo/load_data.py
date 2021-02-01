@@ -11,9 +11,9 @@ for i in range(len(data["features"])):
   for coord in data["features"][i]["geometry"]["coordinates"]:
     tab_routes.append([coord[1], coord[0], i])
 
-df = pd.DataFrame(tab_routes, columns=["lat", "lon", "route_num"])
+df = pd.DataFrame(tab_routes, columns=["lat", "lon", "route_num"], dtype=object)
 
 print(df)
 
-with open("files/monresovelo/data/observations.df", "wb") as infile:
+with open("files/monresovelo/data_processed/observations_matched.df", "wb") as infile:
   pickle.dump(df, infile)

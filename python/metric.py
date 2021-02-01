@@ -8,6 +8,9 @@ import os
 def get_distance_voxels(num_route1, num_route2, tab_routes_voxels=None):
     
     common_parts = len(list(set(tab_routes_voxels[num_route1]) & set(tab_routes_voxels[num_route2])))
+    
+    union = len(list(set(tab_routes_voxels[num_route1]) | set(tab_routes_voxels[num_route2])))
+    
 
     #print(len(tab_routes_voxels[num_route1-1]))
     
@@ -20,9 +23,9 @@ def get_distance_voxels(num_route1, num_route2, tab_routes_voxels=None):
         sim2 = 0.0
         
     if(sim1<0):
-        sim1 = common_parts/len(tab_routes_voxels[num_route1])
+        sim1 = common_parts/union
     if(sim2<0):
-        sim2 = common_parts/len(tab_routes_voxels[num_route2])
+        sim2 = common_parts/union
     
     #print("cp: ", common_parts)
 
