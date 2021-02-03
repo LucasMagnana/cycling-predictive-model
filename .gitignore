@@ -1,7 +1,6 @@
 
 data/
 python/__pycache__/
-*.png
 .vscode/
 cache/
 .ipynb_checkpoints/
