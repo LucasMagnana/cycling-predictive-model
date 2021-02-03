@@ -343,6 +343,7 @@ def main_clusters(global_metric):
     for i in tab_num_test: #len(tab_clusters)):e
         df_route_tested = df_simplified[df_simplified["route_num"]==i]
         
+        
         d_point, f_point = choose_route_endpoints(df_route_tested, i, deviation)
 
         if("veleval" in project_folder and df_route_tested.iloc[0]["lat"] <= 45.5):

@@ -2,7 +2,7 @@ import osmnx as ox
 import pickle
 import pandas as pd
 
-with open("files/veleval_full/data_processed/observations_matched_simplified.df", "rb") as infile:
+with open("files/veleval_walk/data_processed/observations_matched_simplified.df", "rb") as infile:
     df = pickle.load(infile)
 
 
@@ -62,7 +62,7 @@ G_stetienne = ox.graph_from_bbox(nort_lat_se, sout_lat_se, east_lon_se, west_lon
 
 print(len(G_lyon), len(G_stetienne))
 
-with open("files/veleval_full/city_graphs/city.ox", "wb") as outfile:
+with open("files/veleval_walk/city_graphs/city.ox", "wb") as outfile:
     pickle.dump(G_lyon, outfile)
-with open("files/veleval_full/city_graphs/city_2.ox", "wb") as outfile:
+with open("files/veleval_walk/city_graphs/city_2.ox", "wb") as outfile:
     pickle.dump(G_stetienne, outfile)

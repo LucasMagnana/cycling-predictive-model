@@ -44,7 +44,7 @@ def request_map_matching(df_route):
     return tab_requests
 
 
-def clean_dataframe(df):
+def clean_dataframe(df, tab_unreachable_routes=None):
     print("Cleaning dataframe...")
     nb_empty = 0
     df_final = pd.DataFrame(columns=df.columns)
@@ -55,6 +55,14 @@ def clean_dataframe(df):
         else:
             df_temp["route_num"] = i-nb_empty
             df_final = df_final.append(df_temp)
+            if(tab_unreachable_routes != None):
+                if(i in tab_unreachable_routes[0]):
+                    tab_unreachable_routes[0].remove(i)
+                    tab_unreachable_routes[0].append(i-nb_empty)
+                if(i in tab_unreachable_routes[1]):
+                    tab_unreachable_routes[1].remove(i)
+                    tab_unreachable_routes[1].append(i-nb_empty)
+
     return df_final
 
 
@@ -163,20 +171,25 @@ def request_route(lat1, long1, lat2, long2, mode="cycling"):
                             params={"alternatives": "true", "geometries": "geojson", "steps": "true", "access_token": token}) 
 
 
-def pathfinding_mapbox(infile, outfile, nb_routes=sys.maxsize):
+def pathfinding_mapbox(infile, outfile, tabnumtestfile=None, nb_routes=sys.maxsize):
     if(nb_routes > 0):
         with open(infile,'rb') as infile:
             df_map_matched_simplified = pickle.load(infile)
         check_file(outfile, pd.DataFrame(columns=['lon', 'lat', 'route_num']))
         with open(outfile,'rb') as infile:
             df_pathfinding = pickle.load(infile)
+        if(tabnumtestfile != None):
+            with open(tabnumtestfile,'rb') as infile:
+                tab_num_test = pickle.load(infile)
+        else:
+            tab_num_test = None
         if(df_pathfinding.empty):
             begin = 0
         else:
             begin = df_pathfinding.iloc[-1]["route_num"]+1
         for i in range(begin, min(begin+1+nb_routes, df_map_matched_simplified.iloc[-1]["route_num"]+1)): #df_map_matched_simplified.iloc[-1]["route_num"]+1):
             df_temp = df_map_matched_simplified[df_map_matched_simplified["route_num"]==i]
-            if(not(df_temp.empty)):
+            if(tab_num_test == None or i in tab_num_test):
                 d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
                 f_point = [df_temp.iloc[-1]["lat"], df_temp.iloc[-1]["lon"]]
                 pathfind_route_mapbox(d_point, f_point, df_pathfinding, i)
