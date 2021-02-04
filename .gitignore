@@ -19,3 +19,4 @@ cache/
 !num_test.tab
 !loss.tab
 !predict.tab
+!mapbox_pathfinding.df
