@@ -20,3 +20,4 @@ cache/
 !loss.tab
 !predict.tab
 !mapbox_pathfinding.df
+!unreachable_routes.tab
