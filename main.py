@@ -5,7 +5,7 @@ from copy import deepcopy
 import json
 import torch
 import torch.nn as nn
-from math import sin, cos, sqrt, atan2, radians
+from math import sin, cos, sqrt, atan2, radians, exp
 import copy
 from sklearn.cluster import *
 from sklearn.decomposition import PCA
@@ -76,8 +76,8 @@ def create_dict_modif(G, dict_cluster, df_simplified):
 
 pd.options.mode.chained_assignment = None
 
-with open("files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
-    df_pathfinding = pickle.load(infile)
+with open("files/"+project_folder+"/data_processed/mapbox_pathfinding.df",'rb') as infile:
+    df_mapbox_routes_test = pickle.load(infile)
 
 with open("files/"+project_folder+"/data_processed/observations_matched_simplified.df",'rb') as infile:
     df_simplified = pickle.load(infile)
@@ -196,7 +196,7 @@ def modify_network_graph(cl, dict_modif, G, coeff_diminution = 1):
         v = int(vertexes[0])
         v_n = int(vertexes[1]) 
         if(v in G):
-            G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*(dict_modif[cl][key]/coeff_diminution)
+            G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*min(1, exp(dict_modif[cl][key])-1)
         else: 
             return False
     return True
@@ -290,6 +290,14 @@ def main_global(global_metric):
 
     G_1 = deepcopy(G_base_1)
     G_2 = deepcopy(G_base_2)
+    
+    
+    print("GLOBAL :")
+    print("Mean shortest path similarity:", sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100, "%")
+    print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
+    print("Mean improvement:", sum(tab_diff_coeff)/len(tab_diff_coeff)*100, "%")
+    print("===============================")
+
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
         
 
@@ -373,13 +381,20 @@ def main_clusters(global_metric):
 
     G_1 = deepcopy(G_base_1)
     G_2 = deepcopy(G_base_2)
+    
+    print("CLUSTERS ONLY:")
+    print("Mean shortest path similarity:", sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100, "%")
+    print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
+    print("Mean improvement:", sum(tab_diff_coeff)/len(tab_diff_coeff)*100, "%")
+    print("===============================")
+
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
     
 
 
 
 
-def main_clusters_NN(global_metric):
+def main_clusters_NN(global_metric, deviation = 0, full_print=True):
 
     global df_simplified
 
@@ -412,8 +427,6 @@ def main_clusters_NN(global_metric):
     network.eval()
 
     nb_good_predict = 0
-
-    deviation = 0 #5e-2
 
     tab_coeff_simplified = [[], []]
     tab_coeff_modified = [[], []]
@@ -476,15 +489,126 @@ def main_clusters_NN(global_metric):
         #print(1-min(coeff_simplified) <= 1-min(coeff_modified))
 
         #print(1-min(coeff_simplified), 1-min(coeff_modified))
+        
+    if(full_print):
+        print("===============================")
+        print("GOOD PREDICTIONS :")
+        print("===============================")
+        print("Mean shortest path similarity:", sum(tab_coeff_simplified[0])/len(tab_coeff_simplified[0])*100, "%")
+        print("Mean modified path similarity:", sum(tab_coeff_modified[0])/len(tab_coeff_modified[0])*100, "%")
+        print("Mean improvement:", sum(tab_diff_coeff[0])/len(tab_diff_coeff[0])*100, "%")
+        print("===============================")
+        print("BAD PREDICTIONS :")
+        print("===============================")
+        print("Mean shortest path similarity:", sum(tab_coeff_simplified[1])/len(tab_coeff_simplified[1])*100, "%")
+        print("Mean modified path similarity:", sum(tab_coeff_modified[1])/len(tab_coeff_modified[1])*100, "%")
+        print("Mean improvement:", sum(tab_diff_coeff[1])/len(tab_diff_coeff[1])*100, "%")
+        print("===============================")
+        
+    print("NN + CLUSTERS (Good predict:", len(tab_coeff_simplified[0])/(len(tab_coeff_simplified[0])+len(tab_coeff_simplified[1]))*100, "%):")
+    print("===============================")
+    print("Mean shortest path similarity:", sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100, "%")
+    print("Mean modified path similarity:", sum(sum(tab_coeff_modified,[]))/sum(len(row) for row in tab_coeff_modified)*100, "%")
+    print("Mean improvement:", sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100, "%")
+
 
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
 
 
+
+
+def main_clusters_full_predict(global_metric, deviation = 0):
+
+    global df_simplified
+    global df_mapbox_routes_test
+
+    global G_1
+    global G_base_1
+    global nodes_1
+    global tree_1
+
+    global G_2
+    global G_base_2
+    global nodes_2
+    global tree_2
+
+    global dict_modif
+
+    global dict_voxels_clustered
+    global kmeans
+
+    global tab_clusters
+    global dict_cluster
+
+    global tab_num_test
+
+
+    tab_coeff_simplified = []
+    tab_coeff_modified = []
+
+    tab_diff_coeff = []
+
+    for i in tab_num_test: #len(tab_clusters)):
+        df_route_tested = df_simplified[df_simplified["route_num"]==i]
+        df_mapbox = df_mapbox_routes_test[df_mapbox_routes_test["route_num"]==i]
+        
+        d_point, f_point = choose_route_endpoints(df_route_tested, i, deviation)
+
+        if("veleval" in project_folder and df_route_tested.iloc[0]["lat"] <= 45.5):
+            G = G_2
+            nodes = nodes_2
+            tree = tree_2
+            G_base = G_base_2
+        else:
+            G = G_1
+            nodes = nodes_1
+            tree = tree_1
+            G_base = G_base_1
+
+        df_route, tab_route_voxels, coeff_simplified = create_path_compute_similarity(d_point, f_point, df_route_tested, tree, G, nodes, global_metric)
+
+
+        ################################################################################_
+        df_route = df_route[["lat", "lon", "route_num"]]
+
+        modify_network_graph(tab_clusters[i], dict_modif, G)
+
+
+        df_route_modified,_,coeff_modified = create_path_compute_similarity(d_point, f_point, df_simplified[df_simplified["route_num"]==i], tree, G, nodes, global_metric)
+
+        cancel_network_graph_modifications(tab_clusters[i], dict_modif, G, G_base)
+        
+        tab_coeff_simplified.append(1-min(coeff_simplified))
+        tab_coeff_modified.append(1-min(coeff_modified))
+        tab_diff_coeff.append((1-min(coeff_modified))-(1-min(coeff_simplified)))
+        
+        df_route["route_num"] = 0
+        df_route_modified["route_num"] = 1
+        df_mapbox["route_num"] = 2
+        
+        df_display = df_route.append(df_route_modified)
+        df_display = df_display.append(df_mapbox)
+        dp.display_mapbox(df_display, color="route_num")
+        break
+       
+    
+    print("CLUSTERS FULL PREDICTED:")
+    print("Mean shortest path similarity:", sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100, "%")
+    print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
+    print("Mean improvement:", sum(tab_diff_coeff)/len(tab_diff_coeff)*100, "%")
+    print("===============================")
+
+    return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
+
+
+
+
+
+
+
 def main_mapbox(global_metric):
     global df_simplified
-    
-    with open("files/"+project_folder+"/data_processed/mapbox_pathfinding.df",'rb') as infile:
-        df_mapbox_routes_test = pickle.load(infile)
+    global df_mapbox_routes_test
         
     tab_coeff_modified = []
     
@@ -515,6 +639,11 @@ def main_mapbox(global_metric):
         
         tab_coeff_modified.append(coeff[0])
         
+            
+    print("MAPBOX :")
+    print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
+    print("===============================")
+        
     return tab_coeff_modified
 
 
@@ -522,59 +651,27 @@ def main_mapbox(global_metric):
 tab_results_base = []
 tab_results_improvement = []
 
+tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_full_predict(global_metric)
+
 
 tab_coeff_modified = main_mapbox(global_metric)
-print("MAPBOX :")
-print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
-print("===============================")
 
 tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters(global_metric)
 tab_results_base.append(sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(tab_diff_coeff)/len(tab_diff_coeff)*100)
 
 
-print("CLUSTERS :")
-print("Mean shortest path similarity:", sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100, "%")
-print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
-print("Mean improvement:", sum(tab_diff_coeff)/len(tab_diff_coeff)*100, "%")
-print("===============================")
-
-
-
 tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_global(global_metric)
+
 tab_results_base.append(sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(tab_diff_coeff)/len(tab_diff_coeff)*100)
 
-print("GLOBAL :")
-print("Mean shortest path similarity:", sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100, "%")
-print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
-print("Mean improvement:", sum(tab_diff_coeff)/len(tab_diff_coeff)*100, "%")
-print("===============================")
-
-
 
 tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_NN(global_metric)
+
 tab_results_base.append(sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100)
 
-'''print("===============================")
-print("GOOD PREDICTIONS :")
-print("===============================")
-print("Mean shortest path similarity:", sum(tab_coeff_simplified[0])/len(tab_coeff_simplified[0])*100, "%")
-print("Mean modified path similarity:", sum(tab_coeff_modified[0])/len(tab_coeff_modified[0])*100, "%")
-print("Mean improvement:", sum(tab_diff_coeff[0])/len(tab_diff_coeff[0])*100, "%")
-print("===============================")
-print("BAD PREDICTIONS :")
-print("===============================")
-print("Mean shortest path similarity:", sum(tab_coeff_simplified[1])/len(tab_coeff_simplified[1])*100, "%")
-print("Mean modified path similarity:", sum(tab_coeff_modified[1])/len(tab_coeff_modified[1])*100, "%")
-print("Mean improvement:", sum(tab_diff_coeff[1])/len(tab_diff_coeff[1])*100, "%")
-print("===============================")'''
-print("NN + CLUSTERS (Good predict:", len(tab_coeff_simplified[0])/(len(tab_coeff_simplified[0])+len(tab_coeff_simplified[1]))*100, "%):")
-print("===============================")
-print("Mean shortest path similarity:", sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100, "%")
-print("Mean modified path similarity:", sum(sum(tab_coeff_modified,[]))/sum(len(row) for row in tab_coeff_modified)*100, "%")
-print("Mean improvement:", sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100, "%")
 
 tab_results_NN = [[sum(tab_coeff_simplified[0])/len(tab_coeff_simplified[0])*100, sum(tab_coeff_simplified[1])/len(tab_coeff_simplified[1])*100,
 sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100], [sum(tab_diff_coeff[0])/len(tab_diff_coeff[0])*100, 
@@ -612,7 +709,7 @@ if(global_metric):
     plt.savefig("files/"+project_folder+"/images/NN_results_global.png")
 else:
     plt.savefig("files/"+project_folder+"/images/NN_results.png")
-
+    
 
 '''plt.style.use('seaborn-whitegrid')
 fig = plt.figure(figsize=(25,15))
