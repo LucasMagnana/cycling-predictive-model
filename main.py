@@ -31,7 +31,7 @@ import python.validation as validation
 #from python.NN import *
 
 
-project_folder = "veleval_walk"
+project_folder = "veleval"
 print(project_folder)
 
 global_metric = True
@@ -81,6 +81,11 @@ with open("files/"+project_folder+"/data_processed/mapbox_pathfinding.df",'rb') 
 
 with open("files/"+project_folder+"/data_processed/observations_matched_simplified.df",'rb') as infile:
     df_simplified = pickle.load(infile)
+
+
+if not os.path.exists(os.path.dirname("files/"+project_folder+"/city_graphs/city.ox")):
+    print("Creating city.ox")
+    exec(open("files/"+project_folder+"/load_city.py").read())
 
 with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
     G_1 = pickle.load(infile)
@@ -177,10 +182,10 @@ def create_path_compute_similarity(d_point, f_point, df, tree, G, nodes, global_
     tab_voxels, tab_voxels_global, dict_voxels = voxel.generate_voxels(df_coeff, 0, 1)
 
     #\\\DEBUG///
-    '''tab_voxels_min_route = voxel.get_voxels_with_min_routes(dict_voxels, 2)
+    '''tab_voxels_min_route = voxel.get_voxels_with_min_routes(dict_voxels, 2, global_metric)
     df = pd.DataFrame(tab_voxels_min_route, columns=["lat", "lon", "route_num", "type"])
     df_coeff = df_coeff.append(df)
-    dp.display_mapbox(df_coeff, color="type") '''
+    dp.display_mapbox(df_coeff, color="type")'''
 
     if(global_metric):
         coeff = metric.get_distance_voxels(0, 1, tab_voxels_global)
@@ -387,6 +392,7 @@ def main_clusters(global_metric):
     print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
     print("Mean improvement:", sum(tab_diff_coeff)/len(tab_diff_coeff)*100, "%")
     print("===============================")
+    
 
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
     
@@ -582,14 +588,16 @@ def main_clusters_full_predict(global_metric, deviation = 0):
         tab_coeff_modified.append(1-min(coeff_modified))
         tab_diff_coeff.append((1-min(coeff_modified))-(1-min(coeff_simplified)))
         
-        df_route["route_num"] = 0
+        '''df_route_tested["route_num"] = 0
         df_route_modified["route_num"] = 1
         df_mapbox["route_num"] = 2
+        df_route["route_num"] = 3
         
-        df_display = df_route.append(df_route_modified)
+        df_display = df_route_tested.append(df_route_modified)
+        df_display = df_display.append(df_route)
         df_display = df_display.append(df_mapbox)
-        dp.display_mapbox(df_display, color="route_num")
-        break
+        dp.display_mapbox(df_display, color="route_num")'''
+
        
     
     print("CLUSTERS FULL PREDICTED:")
@@ -616,7 +624,7 @@ def main_mapbox(global_metric):
     for i in tab_num_test:
         df_observation = df_simplified[df_simplified["route_num"]==i]
         df_mapbox = df_mapbox_routes_test[df_mapbox_routes_test["route_num"]==i]
-        
+
         df_observation["route_num"] = 0
         df_observation["type"] = 0    
         df_mapbox["route_num"] = 1
@@ -637,7 +645,14 @@ def main_mapbox(global_metric):
         else:
             coeff = metric.get_distance_voxels(0, 1, tab_voxels)
         
-        tab_coeff_modified.append(coeff[0])
+        tab_coeff_modified.append(1-min(coeff))
+
+
+        '''df_observation["route_num"] = 0
+        df_mapbox["route_num"] = 1
+        
+        df_display = df_observation.append(df_mapbox)
+        dp.display_mapbox(df_display, color="route_num")'''
         
             
     print("MAPBOX :")

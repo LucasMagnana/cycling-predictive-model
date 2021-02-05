@@ -1,6 +1,7 @@
 import osmnx as ox
 import pickle
 import pandas as pd
+import os
 
 with open("files/veleval_walk/data_processed/observations_matched_simplified.df", "rb") as infile:
     df = pickle.load(infile)
@@ -61,6 +62,9 @@ G_lyon = ox.graph_from_bbox(nort_lat_ly, sout_lat_ly, east_lon_ly, west_lon_ly, 
 G_stetienne = ox.graph_from_bbox(nort_lat_se, sout_lat_se, east_lon_se, west_lon_se, network_type='walk')
 
 print(len(G_lyon), len(G_stetienne))
+
+if not os.path.exists(os.path.dirname("files/veleval_walk/city_graphs/city.ox")):
+    os.makedirs(os.path.dirname("files/veleval_walk/city_graphs/city.ox"))
 
 with open("files/veleval_walk/city_graphs/city.ox", "wb") as outfile:
     pickle.dump(G_lyon, outfile)

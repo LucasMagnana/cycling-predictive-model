@@ -39,5 +39,8 @@ df_test = pd.DataFrame([[nort_lat, west_lon, 0],
 
 G = ox.graph_from_bbox(nort_lat, sout_lat, east_lon, west_lon)
 
+if not os.path.exists(os.path.dirname("files/monresovelo/city_graphs/city.ox")):
+    os.makedirs(os.path.dirname("files/monresovelo/city_graphs/city.ox"))
+
 with open("files/monresovelo/city_graphs/city.ox", "wb") as outfile:
     pickle.dump(G, outfile)

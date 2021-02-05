@@ -371,7 +371,7 @@ def get_voxels_from_route(route):
     df_temp["route_num"] = 1
     return create_dict_vox(df_temp, 1)
 
-def get_voxels_with_min_routes(dict_vox, min_routes):
+def get_voxels_with_min_routes(dict_vox, min_routes, glob=True):
     """
     Return all voxels or groups of voxels that have at least a number of routes passing through themselves.
     Parameters
@@ -392,7 +392,9 @@ def get_voxels_with_min_routes(dict_vox, min_routes):
     tab_voxel_with_min_routes = [] #final list containing all voxels that matches with the conditions
     
     for key in dict_vox: #for all voxels
-        tab_routes = dict_vox[key]["tab_routes_real"]+dict_vox[key]["tab_routes_extended"]
+        tab_routes = dict_vox[key]["tab_routes_real"]
+        if(glob):
+            tab_routes += dict_vox[key]["tab_routes_extended"]
         
         #print(dict_vox[key][0], dict_vox[key][1])
         
