@@ -327,10 +327,16 @@ def generate_voxels(df, starting, ending, bikepath=False):
         
         #creation of a list containing all neighbours of the voxel
         tab_vox_adj = []
+        
         tab_vox_adj.append(voxel_convolution(vox_int, dict_vox, {}, 0, -1, 0))
         tab_vox_adj.append(voxel_convolution(vox_int, dict_vox, {}, 0, 1, 0))
         tab_vox_adj.append(voxel_convolution(vox_int, dict_vox, {}, 0, 0, 1))
         tab_vox_adj.append(voxel_convolution(vox_int, dict_vox, {}, 0, 0, -1))
+                
+        tab_vox_adj.append(voxel_convolution(vox_int, dict_vox, {}, 0, -1, -1))
+        tab_vox_adj.append(voxel_convolution(vox_int, dict_vox, {}, 0, 1, -1))
+        tab_vox_adj.append(voxel_convolution(vox_int, dict_vox, {}, 0, -1, 1))
+        tab_vox_adj.append(voxel_convolution(vox_int, dict_vox, {}, 0, 1, 1))
         for vox in tab_vox_adj:
             if(len(vox)>0):
                 if(not(set(tab_routes).issubset((set(vox[1]["tab_routes_real"]))))):

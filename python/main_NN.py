@@ -51,9 +51,9 @@ def main(args):
         if(key != -1):
             tab_num_test += random.sample(dict_clusters[key], round(args.percentage_test/100*len(dict_clusters[key])))
     
-    if(os.path.isfile(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab") and False):
+    '''if(os.path.isfile(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab")):
         with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
-            tab_num_test = pickle.load(infile)
+            tab_num_test = pickle.load(infile)'''
     
     tab_num_train = list(range(len(tab_routes_voxels)))
     tab_num_noise = [i for i, e in enumerate(tab_clusters) if e == -1]

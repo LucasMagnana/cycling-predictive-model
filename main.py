@@ -15,8 +15,8 @@ import numpy as np
 import osmnx as ox
 import networkx as nx
 from sklearn.neighbors import KDTree
-import matplotlib.pyplot as plt
 import os
+import argparse
 
 import datetime
 
@@ -27,17 +27,19 @@ import python.metric as metric
 import python.clustering as cl
 import python.RNN as RNN
 import python.validation as validation
-#import python.learning as learning
-#from python.NN import *
+import python.graphs as graphs
+
+if __name__ == "__main__": 
+    parse = argparse.ArgumentParser()
+    parse.add_argument('--global-metric', type=bool, default=True, help="whether to use the global metric or not")
+    parse.add_argument('--project-folder', type=str, default="veleval", help='folder of the project')
+    
+args = parse.parse_args()
 
 
-project_folder = "veleval"
-print(project_folder)
+project_folder = args.project_folder
 
-global_metric = True
-
-if(global_metric == True):
-    print("global")
+global_metric = args.global_metric
 
 
 def create_dict_modif(G, dict_cluster, df_simplified):
@@ -123,9 +125,9 @@ for key in dict_cluster:
 
 data.check_file("files/"+project_folder+"/data_processed/unreachable_routes.tab", [[],[]])
 with open("files/"+project_folder+"/data_processed/unreachable_routes.tab",'rb') as infile:
-    tab_unreachable_routes = pickle.load(infile)
-            
- 
+    tab_unreachable_routes = pickle.load(infile) 
+    
+    
 
 if(not(os.path.isfile("files/"+project_folder+"/city_graphs/graph_modifications.dict"))):
     dict_modif = create_dict_modif(G_1, dict_cluster, df_simplified)
@@ -140,6 +142,7 @@ if(not(os.path.isfile("files/"+project_folder+"/city_graphs/graph_modifications.
     with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'wb') as outfile:
         pickle.dump(dict_modif, outfile)
    
+
             
 if(not(os.path.isfile("files/"+project_folder+"/city_graphs/graph_modifications_global.dict"))):    
     dict_modif_global = {}
@@ -152,16 +155,13 @@ if(not(os.path.isfile("files/"+project_folder+"/city_graphs/graph_modifications_
     with open("files/"+project_folder+"/city_graphs/graph_modifications_global.dict",'wb') as outfile:
         pickle.dump(dict_modif_global, outfile)
     
-    
-
+            
 with open("files/"+project_folder+"/city_graphs/graph_modifications.dict",'rb') as infile:
     dict_modif = pickle.load(infile)
 
 with open("files/"+project_folder+"/city_graphs/graph_modifications_global.dict",'rb') as infile:
     dict_modif_global = pickle.load(infile)
-
-            
-
+    
 
 def create_path_compute_similarity(d_point, f_point, df, tree, G, nodes, global_metric):
 
@@ -239,24 +239,6 @@ def choose_route_endpoints(df_route, num_route, deviation):
 
 
 def main_global(global_metric):
-    global df_simplified
-
-    global G_1
-    global G_base_1
-    global nodes_1
-    global tree_1
-
-    global G_2
-    global G_base_2
-    global nodes_2
-    global tree_2
-
-    global dict_modif_global
-
-    global dict_voxels_clustered
-    global kmeans
-
-    global tab_clusters
 
     deviation = 0 #5e-2
 
@@ -292,9 +274,6 @@ def main_global(global_metric):
         tab_coeff_simplified.append(1-min(coeff_simplified))
         tab_coeff_modified.append(1-min(coeff_modified))
         tab_diff_coeff.append((1-min(coeff_modified))-(1-min(coeff_simplified)))
-
-    G_1 = deepcopy(G_base_1)
-    G_2 = deepcopy(G_base_2)
     
     
     print("GLOBAL :")
@@ -306,34 +285,8 @@ def main_global(global_metric):
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
         
 
-def main_clusters(global_metric):
-    global df_simplified
+def main_clusters(global_metric, deviation=0):
 
-    global G_1
-    global G_base_1
-    global nodes_1
-    global tree_1
-
-    global G_2
-    global G_base_2
-    global nodes_2
-    global tree_2
-
-    global dict_modif
-
-    global dict_voxels_clustered
-    global kmeans
-
-    global tab_clusters
-    global dict_cluster
-
-    nodes_base_1, _ = ox.graph_to_gdfs(G_base_1)
-    tree_base_1 = KDTree(nodes_base_1[['y', 'x']], metric='euclidean')
-
-    nodes_base_2, _ = ox.graph_to_gdfs(G_base_2)
-    tree_base_2 = KDTree(nodes_base_2[['y', 'x']], metric='euclidean')
-
-    deviation = 0 #5e-2
 
     tab_coeff_simplified = []
     tab_coeff_modified = []
@@ -341,23 +294,19 @@ def main_clusters(global_metric):
     tab_diff_coeff = []
 
     for key in dict_cluster:
-
-        df_temp = df_simplified[df_simplified["route_num"]==dict_cluster[key][0]]
-        if("veleval" in project_folder and df_temp.iloc[0]["lat"] <= 45.5):
-            G = G_2
-            nodes = nodes_2
-            tree = tree_2
-            G_base = G_base_2
-            nodes_base = nodes_base_2
-            tree_base = tree_base_2
-        else:
-            G = G_1
-            nodes = nodes_1
-            tree = tree_1
-            G_base = G_base_1
-            nodes_base = nodes_base_1
-            tree_base = tree_base_1
         if(key != -1):
+            df_temp = df_simplified[df_simplified["route_num"]==dict_cluster[key][0]]
+            if("veleval" in project_folder and df_temp.iloc[0]["lat"] <= 45.5):
+                G = G_2
+                nodes = nodes_2
+                tree = tree_2
+                G_base = G_base_2
+            else:
+                G = G_1
+                nodes = nodes_1
+                tree = tree_1
+                G_base = G_base_1
+
             modify_network_graph(key, dict_modif, G)
     
     for i in tab_num_test: #len(tab_clusters)):e
@@ -384,9 +333,7 @@ def main_clusters(global_metric):
         tab_coeff_modified.append(1-min(coeff_modified))
         tab_diff_coeff.append((1-min(coeff_modified))-(1-min(coeff_simplified)))
 
-    G_1 = deepcopy(G_base_1)
-    G_2 = deepcopy(G_base_2)
-    
+
     print("CLUSTERS ONLY:")
     print("Mean shortest path similarity:", sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100, "%")
     print("Mean modified path similarity:", sum(tab_coeff_modified)/len(tab_coeff_modified)*100, "%")
@@ -395,36 +342,18 @@ def main_clusters(global_metric):
     
 
     return tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff
+
     
 
 
 
 
-def main_clusters_NN(global_metric, deviation = 0, full_print=True):
+def main_clusters_NN(global_metric, deviation = 0, full_print=False):
+    
 
-    global df_simplified
-
-    global G_1
-    global G_base_1
-    global nodes_1
-    global tree_1
-
-    global G_2
-    global G_base_2
-    global nodes_2
-    global tree_2
-
-    global dict_modif
-
-    global dict_voxels_clustered
-    global kmeans
-
-    global tab_clusters
-    global dict_cluster
 
     with open("./files/"+project_folder+"/neural_networks/saved/network.param",'rb') as infile:
         param = pickle.load(infile)
-    global tab_num_test
 
     size_data = 1
 
@@ -524,30 +453,6 @@ def main_clusters_NN(global_metric, deviation = 0, full_print=True):
 
 
 def main_clusters_full_predict(global_metric, deviation = 0):
-
-    global df_simplified
-    global df_mapbox_routes_test
-
-    global G_1
-    global G_base_1
-    global nodes_1
-    global tree_1
-
-    global G_2
-    global G_base_2
-    global nodes_2
-    global tree_2
-
-    global dict_modif
-
-    global dict_voxels_clustered
-    global kmeans
-
-    global tab_clusters
-    global dict_cluster
-
-    global tab_num_test
-
 
     tab_coeff_simplified = []
     tab_coeff_modified = []
@@ -666,23 +571,34 @@ def main_mapbox(global_metric):
 tab_results_base = []
 tab_results_improvement = []
 
+
 tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_full_predict(global_metric)
 
 
 tab_coeff_modified = main_mapbox(global_metric)
+tab_results_base.append(sum(tab_coeff_modified)/len(tab_coeff_modified)*100)
+tab_results_improvement.append(0)
 
 tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters(global_metric)
 tab_results_base.append(sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(tab_diff_coeff)/len(tab_diff_coeff)*100)
 
+G_1 = deepcopy(G_base_1)
+G_2 = deepcopy(G_base_2)
+
 
 tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_global(global_metric)
+
+G_1 = deepcopy(G_base_1)
+G_2 = deepcopy(G_base_2)
 
 tab_results_base.append(sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(tab_diff_coeff)/len(tab_diff_coeff)*100)
 
 
 tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_NN(global_metric)
+
+
 
 tab_results_base.append(sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100)
@@ -692,48 +608,10 @@ tab_results_NN = [[sum(tab_coeff_simplified[0])/len(tab_coeff_simplified[0])*100
 sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100], [sum(tab_diff_coeff[0])/len(tab_diff_coeff[0])*100, 
 sum(tab_diff_coeff[1])/len(tab_diff_coeff[1])*100, sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100]]
 
-
-ind = np.arange(len(tab_results_base)) # the x locations for the groups
-width=0.3
-plt.bar(ind, tab_results_base, width, color='y', label='Shortest path')
-plt.bar(ind, tab_results_improvement, width,bottom=tab_results_base, color='g', label="Modified path")
-x = np.arange(len(tab_results_base))
-plt.xticks(x, ["Clusters", "Global", "Clusters + NN"])
-plt.legend(loc='upper right')
-plt.ylabel('Similarity between the path generated and the observation (%)')
-plt.yticks(np.arange(0, 110, step=10))
-
-if(global_metric):
-    plt.savefig("files/"+project_folder+"/images/similarity_results_global.png")
-else:
-    plt.savefig("files/"+project_folder+"/images/similarity_results.png")
-
-#tab_results_NN = [[46.501560592312934, 54.28487555178797, 48.508578915196416], [27.36178796266422, 0.08971430241424035, 20.32936645278844]]
-
-plt.figure()
-ind = np.arange(len(tab_results_NN[0])) # the x locations for the groups
-width=0.3
-plt.bar(ind, tab_results_NN[0], width, color='y', label='Shortest path')
-plt.bar(ind, tab_results_NN[1], width,bottom=tab_results_NN[0], color='g', label="Modified path")
-x = np.arange(len(tab_results_NN[0]))
-plt.legend(loc='upper right')
-plt.xticks(x, ["Good predictions", "Bad predictions", "Total"])
-plt.ylabel('Similarity between the path generated and the observation (%)')
-plt.yticks(np.arange(0, 110, step=10))
-if(global_metric):
-    plt.savefig("files/"+project_folder+"/images/NN_results_global.png")
-else:
-    plt.savefig("files/"+project_folder+"/images/NN_results.png")
+  
     
+graphs.similarity_results_grpah(tab_results_base, tab_results_improvement, project_folder, global_metric)
 
-'''plt.style.use('seaborn-whitegrid')
-fig = plt.figure(figsize=(25,15))
-ax = plt.axes()
-x = np.linspace(0, len(tab_diff_coeff), len(tab_diff_coeff))
-plt.plot(x, tab_diff_coeff, color='red', linewidth=3.5)
-plt.show()
+graphs.NN_results_graph(tab_results_NN, project_folder, global_metric)
 
-plt.plot(x, tab_coeff_simplified, color='red', linewidth=3.5, label='basic')
-plt.plot(x, tab_coeff_modified, color='blue', linewidth=3.5, label='modified')  
-plt.legend(loc='upper right')
-plt.show()'''
+    
