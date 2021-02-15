@@ -31,7 +31,6 @@ import python.graphs as graphs
 
 if __name__ == "__main__": 
     parse = argparse.ArgumentParser()
-    parse.add_argument('--global-metric', type=bool, default=True, help="whether to use the global metric or not")
     parse.add_argument('--project-folder', type=str, default="veleval", help='folder of the project')
     
 args = parse.parse_args()
@@ -39,7 +38,7 @@ args = parse.parse_args()
 
 project_folder = args.project_folder
 
-global_metric = args.global_metric
+global_metric = True
 
 
 def create_dict_modif(G, dict_cluster, df_simplified):
@@ -88,23 +87,31 @@ with open("files/"+project_folder+"/data_processed/observations_matched_simplifi
 if not os.path.exists(os.path.dirname("files/"+project_folder+"/city_graphs/city.ox")):
     print("Creating city.ox")
     exec(open("files/"+project_folder+"/load_city.py").read())
-
-with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
-    G_1 = pickle.load(infile)
-with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
-    G_base_1 = pickle.load(infile)
-nodes_1, _ = ox.graph_to_gdfs(G_1)
-tree_1 = KDTree(nodes_1[['y', 'x']], metric='euclidean')
-
-
+    
+    
 if("veleval" in project_folder):
+
+    with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
+        G_1 = pickle.load(infile)
+    with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
+        G_base_1 = pickle.load(infile)
+    nodes_1, _ = ox.graph_to_gdfs(G_1)
+    tree_1 = KDTree(nodes_1[['y', 'x']], metric='euclidean')
+
     with open("files/"+project_folder+"/city_graphs/city_2.ox", "rb") as infile:
         G_2 = pickle.load(infile)
     with open("files/"+project_folder+"/city_graphs/city_2.ox", "rb") as infile:
         G_base_2 = pickle.load(infile)
-nodes_2, _ = ox.graph_to_gdfs(G_2)
-tree_2 = KDTree(nodes_2[['y', 'x']], metric='euclidean')
+    nodes_2, _ = ox.graph_to_gdfs(G_2)
+    tree_2 = KDTree(nodes_2[['y', 'x']], metric='euclidean')
 
+else:
+    with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
+        G = pickle.load(infile)
+    with open("files/"+project_folder+"/city_graphs/city.ox", "rb") as infile:
+        G_base = pickle.load(infile)
+    nodes, _ = ox.graph_to_gdfs(G)
+    tree = KDTree(nodes[['y', 'x']], metric='euclidean')
 
 #print(len(G_1), len(G_2))
 
@@ -130,12 +137,15 @@ with open("files/"+project_folder+"/data_processed/unreachable_routes.tab",'rb')
     
 
 if(not(os.path.isfile("files/"+project_folder+"/city_graphs/graph_modifications.dict"))):
-    dict_modif = create_dict_modif(G_1, dict_cluster, df_simplified)
-    dict_modif_se = create_dict_modif(G_2, dict_cluster, df_simplified)
-    print(len(dict_modif), len(dict_modif_se))
-    for cl in dict_modif_se:
-        if(cl not in dict_modif):
-            dict_modif[cl] = dict_modif_se[cl]
+    if("veleval" in project_folder):
+        dict_modif = create_dict_modif(G_1, dict_cluster, df_simplified)
+        dict_modif_se = create_dict_modif(G_2, dict_cluster, df_simplified)
+        print(len(dict_modif), len(dict_modif_se))
+        for cl in dict_modif_se:
+            if(cl not in dict_modif):
+                dict_modif[cl] = dict_modif_se[cl]
+    else:
+        dict_modif = create_dict_modif(G, dict_cluster, df_simplified)
             
     print(len(dict_modif))
         
@@ -146,12 +156,15 @@ if(not(os.path.isfile("files/"+project_folder+"/city_graphs/graph_modifications.
             
 if(not(os.path.isfile("files/"+project_folder+"/city_graphs/graph_modifications_global.dict"))):    
     dict_modif_global = {}
-        
     dict_cluster_global = {0: range(len(tab_clusters)+1)}
-    dict_modif_global[0] = create_dict_modif(G_1, dict_cluster_global, df_simplified)[0]
-    print(len(dict_modif_global[0]))
-    dict_modif_global[1] = create_dict_modif(G_2, dict_cluster_global, df_simplified)[0]
-    print(len(dict_modif_global[1]))
+    if("veleval" in project_folder):
+        dict_modif_global[0] = create_dict_modif(G_1, dict_cluster_global, df_simplified)[0]
+        print(len(dict_modif_global[0]))
+        dict_modif_global[1] = create_dict_modif(G_2, dict_cluster_global, df_simplified)[0]
+        print(len(dict_modif_global[1]))
+    else:
+        dict_modif_global[0] = create_dict_modif(G, dict_cluster_global, df_simplified)[0]
+        
     with open("files/"+project_folder+"/city_graphs/graph_modifications_global.dict",'wb') as outfile:
         pickle.dump(dict_modif_global, outfile)
     
@@ -186,6 +199,7 @@ def create_path_compute_similarity(d_point, f_point, df, tree, G, nodes, global_
     df = pd.DataFrame(tab_voxels_min_route, columns=["lat", "lon", "route_num", "type"])
     df_coeff = df_coeff.append(df)
     dp.display_mapbox(df_coeff, color="type")'''
+    
 
     if(global_metric):
         coeff = metric.get_distance_voxels(0, 1, tab_voxels_global)
@@ -236,6 +250,17 @@ def choose_route_endpoints(df_route, num_route, deviation):
         f_point[1] += rand
         
         return d_point, f_point
+    
+    
+def choose_network_graph(df_route, project_folder):
+    if("veleval" in project_folder):
+        if(df_route.iloc[0]["lat"] <= 45.5):
+            return G_2, nodes_2, tree_2, G_base_2
+        else:
+            return G_1, nodes_1, tree_1, G_base_1
+    return G, nodes, tree, G_base
+
+    
 
 
 def main_global(global_metric):
@@ -248,25 +273,19 @@ def main_global(global_metric):
     tab_diff_coeff = []
 
 
+    if("veleval" in project_folder):
+        modify_network_graph(0, dict_modif_global, G_1)
+        modify_network_graph(1, dict_modif_global, G_2)
+    else:
+        global G
+        modify_network_graph(0, dict_modif_global, G)
 
-    modify_network_graph(0, dict_modif_global, G_1)
-    modify_network_graph(1, dict_modif_global, G_2)
-    
     for i in tab_num_test:
         df_route_tested = df_simplified[df_simplified["route_num"]==i]
 
         d_point, f_point = choose_route_endpoints(df_route_tested, i, deviation)
 
-        if("veleval" in project_folder and df_route_tested.iloc[0]["lat"] <= 45.5):
-            G = G_2
-            nodes = nodes_2
-            tree = tree_2
-            G_base = G_base_2
-        else:
-            G = G_1
-            nodes = nodes_1
-            tree = tree_1
-            G_base = G_base_1
+        G, nodes, tree, G_base = choose_network_graph(df_route_tested, project_folder)
 
         df_route, tab_route_voxels, coeff_simplified = create_path_compute_similarity(d_point, f_point, df_route_tested, tree, G_base, nodes, global_metric)
         df_route, tab_route_voxels, coeff_modified = create_path_compute_similarity(d_point, f_point, df_route_tested, tree, G, nodes, global_metric)
@@ -296,16 +315,8 @@ def main_clusters(global_metric, deviation=0):
     for key in dict_cluster:
         if(key != -1):
             df_temp = df_simplified[df_simplified["route_num"]==dict_cluster[key][0]]
-            if("veleval" in project_folder and df_temp.iloc[0]["lat"] <= 45.5):
-                G = G_2
-                nodes = nodes_2
-                tree = tree_2
-                G_base = G_base_2
-            else:
-                G = G_1
-                nodes = nodes_1
-                tree = tree_1
-                G_base = G_base_1
+            
+            G, nodes, tree, G_base = choose_network_graph(df_temp, project_folder)
 
             modify_network_graph(key, dict_modif, G)
     
@@ -315,16 +326,7 @@ def main_clusters(global_metric, deviation=0):
         
         d_point, f_point = choose_route_endpoints(df_route_tested, i, deviation)
 
-        if("veleval" in project_folder and df_route_tested.iloc[0]["lat"] <= 45.5):
-            G = G_2
-            nodes = nodes_2
-            tree = tree_2
-            G_base = G_base_2
-        else:
-            G = G_1
-            nodes = nodes_1
-            tree = tree_1
-            G_base = G_base_1
+        G, nodes, tree, G_base = choose_network_graph(df_route_tested, project_folder)
 
         df_route, tab_route_voxels, coeff_simplified = create_path_compute_similarity(d_point, f_point, df_route_tested, tree, G_base, nodes, global_metric)
         df_route, tab_route_voxels, coeff_modified = create_path_compute_similarity(d_point, f_point, df_route_tested, tree, G, nodes, global_metric)
@@ -374,16 +376,7 @@ def main_clusters_NN(global_metric, deviation = 0, full_print=False):
         
         d_point, f_point = choose_route_endpoints(df_route_tested, i, deviation)
 
-        if("veleval" in project_folder and df_route_tested.iloc[0]["lat"] <= 45.5):
-            G = G_2
-            nodes = nodes_2
-            tree = tree_2
-            G_base = G_base_2
-        else:
-            G = G_1
-            nodes = nodes_1
-            tree = tree_1
-            G_base = G_base_1
+        G, nodes, tree, G_base = choose_network_graph(df_route_tested, project_folder)
 
         df_route, tab_route_voxels, coeff_simplified = create_path_compute_similarity(d_point, f_point, df_route_tested, tree, G, nodes, global_metric)
 
@@ -464,18 +457,11 @@ def main_clusters_full_predict(global_metric, deviation = 0):
         df_mapbox = df_mapbox_routes_test[df_mapbox_routes_test["route_num"]==i]
         
         d_point, f_point = choose_route_endpoints(df_route_tested, i, deviation)
+        
 
-        if("veleval" in project_folder and df_route_tested.iloc[0]["lat"] <= 45.5):
-            G = G_2
-            nodes = nodes_2
-            tree = tree_2
-            G_base = G_base_2
-        else:
-            G = G_1
-            nodes = nodes_1
-            tree = tree_1
-            G_base = G_base_1
+        G, nodes, tree, G_base = choose_network_graph(df_route_tested, project_folder)
 
+            
         df_route, tab_route_voxels, coeff_simplified = create_path_compute_similarity(d_point, f_point, df_route_tested, tree, G, nodes, global_metric)
 
 
@@ -583,14 +569,20 @@ tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters(global_
 tab_results_base.append(sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(tab_diff_coeff)/len(tab_diff_coeff)*100)
 
-G_1 = deepcopy(G_base_1)
-G_2 = deepcopy(G_base_2)
+if("veleval" in project_folder):
+    G_1 = deepcopy(G_base_1)
+    G_2 = deepcopy(G_base_2)
+else:
+    G = deepcopy(G_base)
 
 
 tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_global(global_metric)
 
-G_1 = deepcopy(G_base_1)
-G_2 = deepcopy(G_base_2)
+if("veleval" in project_folder):
+    G_1 = deepcopy(G_base_1)
+    G_2 = deepcopy(G_base_2)
+else:
+    G = deepcopy(G_base)
 
 tab_results_base.append(sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(tab_diff_coeff)/len(tab_diff_coeff)*100)

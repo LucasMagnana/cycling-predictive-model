@@ -21,7 +21,7 @@ def main(args):
     project_folder = args.project_folder
 
     #  gpx_pathfindind_cycling
-    with open(args.path+"files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
+    with open(args.path+"files/"+project_folder+"/data_processed/OD.df",'rb') as infile:
         df_pathfinding = pickle.load(infile)
     with open(args.path+"files/"+project_folder+"/data_processed/observations_matched_simplified.df",'rb') as infile:
         df_simplified = pickle.load(infile)
