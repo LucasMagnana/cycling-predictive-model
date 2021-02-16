@@ -21,7 +21,7 @@ def main(args):
     project_folder = args.project_folder
 
     #  gpx_pathfindind_cycling
-    with open(args.path+"files/"+project_folder+"/data_processed/OD.df",'rb') as infile:
+    with open(args.path+"files/"+project_folder+"/data_processed/osmnx_pathfinding_simplified.df",'rb') as infile:
         df_pathfinding = pickle.load(infile)
     with open(args.path+"files/"+project_folder+"/data_processed/observations_matched_simplified.df",'rb') as infile:
         df_simplified = pickle.load(infile)
@@ -51,9 +51,9 @@ def main(args):
         if(key != -1):
             tab_num_test += random.sample(dict_clusters[key], round(args.percentage_test/100*len(dict_clusters[key])))
     
-    '''if(os.path.isfile(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab")):
+    if(os.path.isfile(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab")):
         with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
-            tab_num_test = pickle.load(infile)'''
+            tab_num_test = pickle.load(infile)
     
     tab_num_train = list(range(len(tab_routes_voxels)))
     tab_num_noise = [i for i, e in enumerate(tab_clusters) if e == -1]

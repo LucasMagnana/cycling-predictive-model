@@ -58,8 +58,8 @@ df_test = pd.DataFrame([[nort_lat_ly, west_lon_ly, 0],
     
 
 
-G_lyon = ox.graph_from_bbox(nort_lat_ly, sout_lat_ly, east_lon_ly, west_lon_ly, network_type='walk')
-G_stetienne = ox.graph_from_bbox(nort_lat_se, sout_lat_se, east_lon_se, west_lon_se, network_type='walk')
+G_lyon = ox.graph_from_bbox(nort_lat_ly, sout_lat_ly, east_lon_ly, west_lon_ly, network_type="walk")
+G_stetienne = ox.graph_from_bbox(nort_lat_se, sout_lat_se, east_lon_se, west_lon_se, network_type="walk")
 
 print(len(G_lyon), len(G_stetienne))
 

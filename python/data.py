@@ -301,12 +301,13 @@ def pathfinding_osmnx_veleval(infile_str, outfile_str, graphfile_str, unreachabl
             df_temp = df_simplified[df_simplified["route_num"]==i]
             d_point = [df_temp.iloc[0]["lat"], df_temp.iloc[0]["lon"]]
             if(i in tab_unreachable_routes[0]):
-                print("chatte")
                 d_point = [df_temp.iloc[1]["lat"], df_temp.iloc[1]["lon"]]
             f_point = [df_temp.iloc[-1]["lat"], df_temp.iloc[-1]["lon"]]
             if(i in tab_unreachable_routes[1]):
-                print("bite")
                 f_point = [df_temp.iloc[-2]["lat"], df_temp.iloc[-2]["lon"]]
+            if(i in tab_unreachable_routes[2]):
+                d_point = [df_temp.iloc[2]["lat"], df_temp.iloc[2]["lon"]]
+                f_point = [df_temp.iloc[-3]["lat"], df_temp.iloc[-3]["lon"]]
             if(d_point[0] > 45.5):
                 route = pathfind_route_osmnx(d_point, f_point, tree, G, nodes)
                 route_coord = [[G.nodes[x]["y"], G.nodes[x]["x"]] for x in route]
