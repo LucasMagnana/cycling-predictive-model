@@ -38,7 +38,7 @@ args = parse.parse_args()
 
 project_folder = args.project_folder
 
-global_metric = True
+global_metric = False
 
 
 def create_dict_modif(G, dict_cluster, df_simplified):
