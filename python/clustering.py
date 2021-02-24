@@ -29,9 +29,9 @@ def cluster_properties(dict_cl, X, cl, metric=None):
     big_clusters = []
     for i in dict_cl:
         if(i != -1):
-            if(len(dict_cl[i]) > len(X)/60):
+            if(len(dict_cl[i]) >= len(X)*2/100):
                 big_clusters.append(i)
-            elif(len(dict_cl[i]) <= len(X)/500):
+            elif(len(dict_cl[i]) <= len(X)*0.25/100):
                 mini_clusters.append(i)
             mean+=len(dict_cl[i])
 

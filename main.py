@@ -38,7 +38,7 @@ args = parse.parse_args()
 
 project_folder = args.project_folder
 
-global_metric = False
+global_metric = True
 
 
 def create_dict_modif(G, dict_cluster, df_simplified):
@@ -52,7 +52,7 @@ def create_dict_modif(G, dict_cluster, df_simplified):
                 df_temp = df_simplified[df_simplified["route_num"]==dict_cluster[cl][num_route]]
                 df_temp["route_num"] = num_route
                 df_cluster = df_cluster.append(df_temp)
-            _, dict_voxels_cluster_global, dict_voxels_cluster = voxel.generate_voxels(df_cluster, df_cluster.iloc[0]["route_num"], df_cluster.iloc[-1]["route_num"])
+            _, _, dict_voxels_cluster = voxel.generate_voxels(df_cluster, df_cluster.iloc[0]["route_num"], df_cluster.iloc[-1]["route_num"])
             dict_dict_voxels_cluster[cl] = dict_voxels_cluster
     for v in G:
         for v_n in G[v]:
@@ -124,10 +124,16 @@ with open("./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') 
 with open("./files/"+project_folder+"/clustering/dbscan_observations.tab",'rb') as infile:
     tab_clusters = pickle.load(infile)
 dict_cluster = cl.tab_clusters_to_dict(tab_clusters)
-for key in dict_cluster:
-    for nr in dict_cluster[key]:
-        if nr in tab_num_test:
-            dict_cluster[key].remove(nr)
+
+print(len(tab_clusters))
+
+
+for i in tab_num_test:
+    if i not in dict_cluster[tab_clusters[i]] or dict_cluster[tab_clusters[i]] == -1:
+        print("Error deleting route from cluster")
+    else:
+        dict_cluster[tab_clusters[i]].remove(i)
+
  
 
 data.check_file("files/"+project_folder+"/data_processed/unreachable_routes.tab", [[],[]])
@@ -215,7 +221,7 @@ def modify_network_graph(cl, dict_modif, G, coeff_diminution = 1):
         v = int(vertexes[0])
         v_n = int(vertexes[1]) 
         if(v in G):
-            G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*min(1, exp(dict_modif[cl][key])-1)
+            G[v][v_n][0]['length'] -= G[v][v_n][0]['length']*dict_modif[cl][key] #min(1, exp(dict_modif[cl][key])-1)
         else: 
             return False
     return True
@@ -557,24 +563,7 @@ def main_mapbox(global_metric):
 tab_results_base = []
 tab_results_improvement = []
 
-
-tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_full_predict(global_metric)
-
-
-tab_coeff_modified = main_mapbox(global_metric)
-tab_results_base.append(sum(tab_coeff_modified)/len(tab_coeff_modified)*100)
-tab_results_improvement.append(0)
-
-tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters(global_metric)
-tab_results_base.append(sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100)
-tab_results_improvement.append(sum(tab_diff_coeff)/len(tab_diff_coeff)*100)
-
-if("veleval" in project_folder):
-    G_1 = deepcopy(G_base_1)
-    G_2 = deepcopy(G_base_2)
-else:
-    G = deepcopy(G_base)
-
+tab_coeff_modified_mapbox = main_mapbox(global_metric)
 
 tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_global(global_metric)
 
@@ -585,13 +574,28 @@ else:
     G = deepcopy(G_base)
 
 tab_results_base.append(sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100)
+
+tab_results_base.append(sum(tab_coeff_modified_mapbox)/len(tab_coeff_modified_mapbox)*100)
+
+tab_results_base.append(sum(tab_coeff_modified)/len(tab_coeff_modified)*100)
+
+
+'''tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters(global_metric)
+tab_results_base.append(sum(tab_coeff_simplified)/len(tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(tab_diff_coeff)/len(tab_diff_coeff)*100)
 
+if("veleval" in project_folder):
+    G_1 = deepcopy(G_base_1)
+    G_2 = deepcopy(G_base_2)
+else:
+    G = deepcopy(G_base)'''
 
-tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_NN(global_metric)
+tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_full_predict(global_metric)
+
+tab_results_base.append(sum(tab_coeff_modified)/len(tab_coeff_modified)*100)
 
 
-
+'''tab_coeff_simplified, tab_coeff_modified, tab_diff_coeff = main_clusters_NN(global_metric)
 tab_results_base.append(sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100)
 tab_results_improvement.append(sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100)
 
@@ -599,11 +603,11 @@ tab_results_improvement.append(sum(sum(tab_diff_coeff,[]))/sum(len(row) for row 
 tab_results_NN = [[sum(tab_coeff_simplified[0])/len(tab_coeff_simplified[0])*100, sum(tab_coeff_simplified[1])/len(tab_coeff_simplified[1])*100,
 sum(sum(tab_coeff_simplified,[]))/sum(len(row) for row in tab_coeff_simplified)*100], [sum(tab_diff_coeff[0])/len(tab_diff_coeff[0])*100, 
 sum(tab_diff_coeff[1])/len(tab_diff_coeff[1])*100, sum(sum(tab_diff_coeff,[]))/sum(len(row) for row in tab_diff_coeff)*100]]
-
+'''
   
     
-graphs.similarity_results_grpah(tab_results_base, tab_results_improvement, project_folder, global_metric)
+graphs.similarity_results_graph(tab_results_base, tab_results_improvement, project_folder, global_metric)
 
-graphs.NN_results_graph(tab_results_NN, project_folder, global_metric)
+#graphs.NN_results_graph(tab_results_NN, project_folder, global_metric)
 
     

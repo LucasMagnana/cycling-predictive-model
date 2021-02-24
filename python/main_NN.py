@@ -47,6 +47,11 @@ def main(args):
         
     dict_clusters = cl.tab_clusters_to_dict(tab_clusters)
     
+    '''for key in dict_clusters:
+        if(key != -1):
+            tab_num_test += random.sample(dict_clusters[key], round(args.percentage_test/100*len(dict_clusters[key])))'''
+    
+    
     tab_num_routes_not_noisy = []
     for key in dict_clusters:
         if(key != -1):
@@ -56,6 +61,7 @@ def main(args):
     tab_num_test = random.sample(tab_num_routes_not_noisy, round(args.percentage_test/100*len(tab_num_routes_not_noisy)))
     
     '''if(os.path.isfile(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab")):
+        print("Using previous tab num test")
         with open(args.path+"./files/"+project_folder+"/neural_networks/saved/num_test.tab",'rb') as infile:
             tab_num_test = pickle.load(infile)'''
     

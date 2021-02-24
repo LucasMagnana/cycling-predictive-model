@@ -1,15 +1,15 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def similarity_results_grpah(tab_results_base, tab_results_improvement, project_folder, global_metric):
+def similarity_results_graph(tab_results_base, tab_results_improvement, project_folder, global_metric):
     ind = np.arange(len(tab_results_base)) # the x locations for the groups
     width=0.3
-    plt.bar(ind, tab_results_base, width, color='y', label='Shortest path')
-    plt.bar(ind, tab_results_improvement, width,bottom=tab_results_base, color='g', label="Modified path")
+    plt.bar(ind, tab_results_base, width, color='g', label='Mean similarity (%)')
+    #plt.bar(ind, tab_results_improvement, width,bottom=tab_results_base, color='g', label="Modified path")
     x = np.arange(len(tab_results_base))
-    plt.xticks(x, ["Mapbox", "Clusters", "Global", "Clusters + NN"])
-    plt.legend(loc='upper right')
-    plt.ylabel('Similarity between the path generated and the observation (%)')
+    plt.xticks(x, ["Computed", "Mapbox", "Global", "Experience-based"])
+    plt.legend(loc='upper left')
+    #plt.ylabel('Similarity between the path generated and the observation (%)')
     plt.yticks(np.arange(0, 110, step=10))
 
     if(global_metric):
